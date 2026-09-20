@@ -1,0 +1,140 @@
+% Custom theme matching the "Test-Time Adaptation" deck (Old Slides/) style.
+% Navy + orange + steel-blue palette, PT Serif headings, Lato body.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{theme}
+
+\RequirePackage{fontspec}
+\RequirePackage{tikz}
+\usetikzlibrary{calc,shadows,arrows.meta,positioning}
+\RequirePackage{tcolorbox}
+\tcbuselibrary{skins}
+\RequirePackage{fontawesome5}
+\RequirePackage{booktabs}
+\RequirePackage{multirow}
+\RequirePackage{array}
+\RequirePackage{amsmath,amssymb}
+
+% ---------- Fonts ----------
+\setmainfont{PT Serif}[
+  BoldFont = {PT Serif Bold},
+  ItalicFont = {PT Serif Italic},
+  BoldItalicFont = {PT Serif Bold Italic}
+]
+\setsansfont{Lato}[
+  BoldFont = {Lato Bold},
+  ItalicFont = {Lato Italic},
+  BoldItalicFont = {Lato Bold Italic}
+]
+\renewcommand{\familydefault}{\sfdefault}
+
+% ---------- Colors ----------
+\definecolor{Navy}{HTML}{1B2A4A}
+\definecolor{NavyDeep}{HTML}{131F38}
+\definecolor{Orange}{HTML}{E8873B}
+\definecolor{Steel}{HTML}{2E86AB}
+\definecolor{CardBG}{HTML}{E9F1F8}
+\definecolor{CardBGAlt}{HTML}{EDF3F9}
+\definecolor{BodyGray}{HTML}{33415C}
+\definecolor{SubGray}{HTML}{5B6B85}
+\definecolor{LightSub}{HTML}{9FB0CC}
+\definecolor{FaintRing}{HTML}{3A4E76}
+\definecolor{PageWhite}{HTML}{FFFFFF}
+
+\setbeamercolor{background canvas}{bg=PageWhite}
+\setbeamercolor{normal text}{fg=BodyGray,bg=PageWhite}
+\setbeamercolor{frametitle}{fg=Navy,bg=PageWhite}
+\setbeamercolor{structure}{fg=Steel}
+\setbeamerfont{frametitle}{family=\rmfamily,series=\bfseries,size=\Large}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize items}[circle]
+\setbeamercolor{itemize item}{fg=Orange}
+\setbeamercolor{itemize subitem}{fg=Steel}
+\setbeamerfont{itemize/enumerate body}{family=\sffamily}
+\setbeamertemplate{enumerate items}[default]
+\setbeamercolor{enumerate item}{fg=Orange}
+
+% ---------- Slide geometry ----------
+\setbeamersize{text margin left=11.5mm,text margin right=11.5mm}
+
+% ---------- Frame title (custom, replicates card-deck look) ----------
+\setbeamertemplate{frametitle}{%
+  \vspace*{4mm}%
+  {\usebeamerfont{frametitle}\usebeamercolor[fg]{frametitle}\insertframetitle}\\[1.2mm]
+  {\color{Orange}\rule{9mm}{1.6pt}}%
+  \vspace*{2mm}%
+}
+
+% ---------- Footer with page counter (light theme) ----------
+\newcommand{\lightfooter}{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \node[anchor=south east,xshift=-8mm,yshift=4mm,font=\sffamily\footnotesize,text=SubGray!70] at (current page.south east) {\insertframenumber\,/\,\inserttotalframenumber};
+  \end{tikzpicture}%
+}
+\addtobeamertemplate{footline}{}{\lightfooter}
+
+% ---------- Decorative navy corner rings (for navy frames) ----------
+\newcommand{\navyrings}{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \draw[FaintRing,line width=1pt] ($(current page.north east)+(-2.6,-1.6)$) circle (3.3);
+    \draw[Orange!70,line width=1pt] ($(current page.north east)+(-1.5,-0.6)$) circle (2.2);
+    \draw[Steel!60,line width=1pt] ($(current page.south west)+(1.4,1.2)$) circle (2.6);
+  \end{tikzpicture}%
+}
+
+% ---------- Navy "divider / title" frame environment ----------
+\newenvironment{navyframe}{%
+  \setbeamercolor{background canvas}{bg=Navy}
+  \setbeamercolor{normal text}{fg=white,bg=Navy}
+  \begin{frame}[plain]
+  \navyrings
+}{%
+  \end{frame}
+}
+
+% ---------- Icon card (tcolorbox) ----------
+\newtcolorbox{card}{
+  colback=CardBG, colframe=CardBG, boxrule=0pt, halign=left,
+  arc=2.2mm, boxsep=1.8mm, left=4mm, right=4mm, top=2.8mm, bottom=2.8mm,
+  before skip=1.8mm, after skip=1.8mm
+}
+
+% Fixed-height variant for aligning card rows: \begin{cardh}{<height>} ... \end{cardh}
+\newtcolorbox{cardh}[1]{
+  colback=CardBG, colframe=CardBG, boxrule=0pt, halign=left, valign=center,
+  arc=2.2mm, boxsep=1.8mm, left=4mm, right=4mm, top=2.8mm, bottom=2.8mm,
+  before skip=1.8mm, after skip=1.8mm, height=#1
+}
+
+% \cardrow{icon}{iconcolor}{title}{subtitle} -- icon-left, text-right row (no justification issues)
+\newcommand{\cardrow}[4]{%
+  \noindent\begin{minipage}[c]{8mm}\iconcircle{#1}{#2}\end{minipage}%
+  \hspace{2mm}%
+  \begin{minipage}[c]{0.80\linewidth}
+    \raggedright{\rmfamily\bfseries\color{Navy} #3}%
+    \ifx&#4&\else\\[0.3mm]{\sffamily\footnotesize\color{SubGray} #4}\fi
+  \end{minipage}%
+}
+
+% \cardcol{icon}{iconcolor}{title}{subtitle} -- icon-top, centered, for narrow columns
+\newcommand{\cardcol}[4]{%
+  \centering\iconcircle{#1}{#2}\\[1.2mm]
+  {\rmfamily\bfseries\color{Navy}\small #3}%
+  \ifx&#4&\else\\[0.2mm]{\sffamily\scriptsize\color{SubGray} #4}\fi
+}
+
+% \iconcircle{icon}{color}
+\newcommand{\iconcircle}[2]{%
+  \tikz[baseline=-0.6ex]{\node[circle,fill=#2,minimum size=8mm,inner sep=0] (c) {\color{white}\small\faIcon{#1}};}%
+}
+
+% \cardtitle{Title}{Subtitle-or-empty}
+\newcommand{\cardheading}[2]{%
+  {\rmfamily\bfseries\color{Navy}\large #1}\\[-0.3mm]
+  {\ifx&#2&\else\sffamily\footnotesize\itshape\color{SubGray}#2\fi}%
+}
+
+\newcommand{\sectiontag}[1]{%
+  {\sffamily\bfseries\color{Steel}\small\MakeUppercase{#1}}%
+}
+
+\endinput

@@ -6,3 +6,15 @@ conference_101719.pdf
 conference_101719.synctex.gz
 conference_101719.bbl
 conference_101719.blg
+
+presentation/*.aux
+presentation/*.log
+presentation/*.nav
+presentation/*.snm
+presentation/*.toc
+presentation/*.out
+presentation/*.vrb
+presentation/*.fdb_latexmk
+presentation/*.fls
+presentation/*.synctex.gz
+presentation/*.pdf
