@@ -1,10 +1,30 @@
 \section{Conclusion}
 
-This paper presented [name or short description of the proposed approach]
-for [research problem]. The methodology combines [key components] and was
-evaluated using [dataset, testbed, or experimental protocol]. The results
-show that [state the main finding without overstating the evidence].
+This paper examined which components limit STAMP in open-world test-time
+adaptation under severe image corruption. We tested four focused interventions
+while retaining the consistency filter, class-balanced replay memory, and
+shared CIFAR-C evaluation protocol. Replacing entropy with KNN feature distance
+improved known-class accuracy but did not improve the joint
+recognition--rejection trade-off. Energy scoring substantially improved the
+CIFAR-100-C result, but its CIFAR-10-C AUC remained weak. Applying ACI to the
+energy threshold produced nearly identical, slightly lower metrics than the
+rolling-percentile energy baseline on both datasets; hence, the reported
+experiment does not support adaptive thresholding as the main remedy in these
+streams.
 
-Despite these results, the study is limited by [main limitation]. Future
-work will investigate [future direction 1], [future direction 2], and
-[future direction 3] to improve [target capability or outcome].
+The most consequential completed intervention was correcting replay-loss
+scaling while memory is partially filled. STAMP+BSN achieved the best completed
+H-scores: 81.19 on CIFAR-10-C with noise outliers and 72.89 on CIFAR-100-C.
+These results are consistent with the hypothesis that excessive early replay
+updates caused by the $64/N$ scaling error can destabilize adaptation, although
+the aggregate metrics alone do not prove this mechanism. Overall, the findings
+shift the emphasis from selecting an outlier score alone to ensuring that the
+memory-adaptation objective is correctly normalized.
+
+The study is limited to severity-5 CIFAR-C corruption streams with generated
+noise outliers and reports aggregate means without multi-seed uncertainty,
+per-corruption metrics, or memory-admission traces. Entropy+ACI remains a
+pending comparator. Future work should complete that comparison, log replay
+occupancy, loss scale, ID rejection, and OOD admission over time, and test the
+replay correction across multiple seeds, semantic OOD sources, and larger
+open-world benchmarks.

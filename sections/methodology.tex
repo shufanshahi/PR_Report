@@ -125,15 +125,16 @@ admitting more samples on the next update. Rate feedback targets the mean
 batch rejection rate; an indicator-based alternative is retained only as an
 ablation.
 
-Round 3 has two running variants under the unchanged evaluation protocol:
+Round 3 has two variants under the unchanged evaluation protocol:
 \emph{Entropy--STAMP+ACI} applies ACI to STAMP's original entropy score and
 isolates the threshold mechanism, while \emph{Energy--STAMP+ACI} combines ACI
 with the round-2 score. These variants test whether a score replacement, a
 threshold replacement, or both are needed. The ACI reference provides a
 long-run calibration result for conformal coverage under shift; it does not
 guarantee OOD AUC or H-score in this application. Those metrics, plus ID
-rejection and OOD admission rates, are therefore reported empirically when the
-running experiments finish.
+rejection and OOD admission rates, must therefore be evaluated empirically.
+Energy--STAMP+ACI has completed under the stated protocol; the corresponding
+entropy--STAMP+ACI result remains pending.
 
 \subsection{Round 4: Batch-Size-Invariant Replay Weighting}
 Round 4 addresses an implementation error in the replay objective rather than
@@ -181,7 +182,8 @@ joint trade-off is summarized by
     H\text{-score}=\frac{2\,\mathrm{Acc}\,\mathrm{AUC}}
     {\mathrm{Acc}+\mathrm{AUC}}.
 \end{equation}
-The results table reports KNN--STAMP, energy--STAMP, and STAMP+BSN under this
-shared protocol and reserves rows for the two ACI variants. This allows score,
+The results table reports KNN--STAMP, energy--STAMP, energy--STAMP+ACI, and
+STAMP+BSN under this shared protocol. The pending entropy--STAMP+ACI comparator
+is discussed separately until its results are available. This allows score,
 threshold, and replay-loss choices to be compared without changing datasets,
 baselines, or metrics.

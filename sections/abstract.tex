@@ -4,32 +4,17 @@ shift without allowing unknown samples to corrupt the adaptation process.
 STAMP addresses this problem with consistency filtering, entropy-based
 admission to a class-balanced memory, and stable replay, but its detector and
 adaptation objective both depend on prediction entropy. We study whether
-outlier scores imported from out-of-distribution detection can provide a
-better admission signal while leaving the remainder of STAMP unchanged. Our
-first hypothesis was that distance to clean source features would separate
-outliers from shifted in-distribution samples and decouple detection from the
-adapting classifier. A K-nearest-neighbor (KNN) variant produced mixed evidence.
-On CIFAR-10-C with noise outliers it achieved 78.64\% accuracy but only 59.10\%
-AUC and a 63.61\% H-score; on CIFAR-100-C it achieved 45.73\%, 69.93\%, and
-54.15\%, respectively. Although KNN--STAMP improved accuracy over the frozen
-source model, test-time normalization obtained higher H-scores on both
-benchmarks. We hypothesize that severe corruption moves valid samples away
-from the clean reference bank, weakening a fixed feature-distance test. We
-therefore replace KNN with logit energy and a rolling, label-free threshold,
-which require neither source-reference retrieval nor additional model passes.
-The energy variant attains 57.14\% accuracy, 95.12\% AUC, and 71.33\% H-score
-on CIFAR-100-C, outperforming both baselines; on CIFAR-10-C, it reaches 78.99\%
-accuracy but 54.33\% AUC and a 63.80\% H-score. Thus, energy scoring is highly
-effective in the 100-class setting but does not consistently improve the joint
-recognition--rejection trade-off across datasets. A third, ongoing experiment
-uses adaptive conformal inference to calibrate the admission threshold online
-while holding the underlying score fixed; its results are reserved to test
-whether threshold drift, rather than score choice alone, explains this gap. A
-fourth intervention corrects an implementation error in STAMP's replay loss:
-when memory was partially filled, a hard-coded capacity factor scaled gradients
-by $64/N$ instead of using the current replay size $N$. Replacing this factor
-with $N$ yields 78.95\% accuracy, 83.96\% AUC, and an 81.19\% H-score on
-CIFAR-10-C, and 58.02\%, 98.29\%, and 72.89\% on CIFAR-100-C. These are the
-best completed H-scores, showing that correct replay-loss scaling can matter as
-much as the choice of outlier score.
+outlier scores from out-of-distribution detection can provide a better
+admission signal while leaving the remainder of STAMP unchanged. A
+nearest-neighbor variant based on clean source features produced mixed results,
+as severe corruption can move valid samples away from the reference bank. We
+therefore evaluate logit energy with a rolling, label-free threshold, avoiding
+source-reference retrieval and additional model passes. Energy scoring improves
+outlier detection in the larger benchmark but does not consistently improve the
+combined recognition--rejection trade-off. Adaptive conformal inference closely
+matches the energy baseline without providing a clear improvement. Finally, we
+correct an implementation error in STAMP's replay loss that improperly scaled
+gradients when the memory was partially filled. This correction produces the
+strongest completed H-scores, showing that accurate replay-loss scaling can
+matter as much as the choice of outlier score.
 \end{abstract}

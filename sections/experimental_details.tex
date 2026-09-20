@@ -22,8 +22,8 @@ to distinguish these failure modes.
 \begin{table}[t]
     \caption{Mean results across 15 severity-5 corruptions. Acc., AUC, and
     H-score are percentages. R1 uses KNN feature distance; R2 uses energy
-    scoring with percentile calibration; R3 ACI experiments are running; R4
-    corrects replay-loss scaling.}
+    scoring with percentile calibration; R3 applies ACI to energy (the entropy
+    comparator is pending); R4 corrects replay-loss scaling.}
     \label{tab:main-results}
     \centering
     \small
@@ -33,20 +33,18 @@ to distinguish these failure modes.
         Dataset & Method & Acc. & AUC & H-score \\
         \hline
         CIFAR-10-C & Source & 57.34 & 70.39 & 62.32 \\
-        + Noise & Norm-test & 72.95 & 68.51 & \textbf{70.58} \\
-        & KNN--STAMP (R1) & \textbf{78.64} & 59.10 & 63.61 \\
+        + Noise & Norm-test & 72.95 & 68.51 & 70.58 \\
+        & KNN--STAMP (R1) & 78.64 & 59.10 & 63.61 \\
         & Energy--STAMP (R2) & \textbf{78.99} & 54.33 & 63.80 \\
+        & Energy+ACI (R3) & 78.98 & 54.08 & 63.58 \\
         & STAMP+BSN (R4) & 78.95 & \textbf{83.96} & \textbf{81.19} \\
-        & Entropy+ACI (R3) & \multicolumn{3}{c}{\emph{running}} \\
-        & Energy+ACI (R3) & \multicolumn{3}{c}{\emph{running}} \\
         \hline
         CIFAR-100-C & Source & 35.83 & 43.13 & 38.01 \\
-        + Noise & Norm-test & \textbf{45.90} & \textbf{80.91} & \textbf{58.49} \\
+        + Noise & Norm-test & 45.90 & 80.91 & 58.49 \\
         & KNN--STAMP (R1) & 45.73 & 69.93 & 54.15 \\
-        & Energy--STAMP (R2) & \textbf{57.14} & \textbf{95.12} & \textbf{71.33} \\
+        & Energy--STAMP (R2) & 57.14 & 95.12 & 71.33 \\
+        & Energy+ACI (R3) & 57.04 & 95.08 & 71.24 \\
         & STAMP+BSN (R4) & \textbf{58.02} & \textbf{98.29} & \textbf{72.89} \\
-        & Entropy+ACI (R3) & \multicolumn{3}{c}{\emph{running}} \\
-        & Energy+ACI (R3) & \multicolumn{3}{c}{\emph{running}} \\
         \hline
     \end{tabular}
 \end{table}
@@ -73,6 +71,22 @@ and energy, with per-corruption results, to determine whether the low
 CIFAR-10-C AUC arises from score overlap, threshold calibration, or changes in
 the samples admitted to memory.
 
+\subsection{Round-3 Results: Energy+ACI}
+Applying ACI to the energy score does not improve on the fixed-target rolling
+percentile rule in this evaluation. On CIFAR-10-C, Energy+ACI obtains 78.98
+accuracy, 54.08 AUC, and 63.58 H-score, compared with 78.99, 54.33, and 63.80
+for Energy--STAMP. On CIFAR-100-C, the corresponding values are 57.04, 95.08,
+and 71.24, compared with 57.14, 95.12, and 71.33. The changes are small and
+negative for every reported metric. Consequently, these data do not support the
+hypothesis that ACI-based threshold adaptation improves the energy variant on
+the constant severity-5 streams used here.
+
+This is a result about the reported energy+ACI configuration, not a general
+failure of conformal calibration. The experiment does not yet provide the
+entropy+ACI comparator, nor does it include the rejection-rate trajectories or
+per-corruption admission statistics needed to determine whether the controller
+changed behavior despite similar aggregate metrics.
+
 \subsection{Round-4 Results: Replay-Loss Scaling Correction}
 STAMP+BSN corrects the replay-loss normalization during memory warm-up. On
 CIFAR-10-C, it preserves the energy variant's accuracy (78.95 versus 78.99)
@@ -91,13 +105,11 @@ memory occupancy, loss magnitude, and admission rates should be logged in a
 follow-up ablation to confirm that the improvement occurs during warm-up rather
 than through an uncontrolled experimental difference.
 
-\subsection{Round-3 Experiments in Progress}
-The pending round-3 rows evaluate adaptive conformal inference (ACI) as a
-threshold controller. Entropy--STAMP+ACI holds STAMP's original score fixed and
-tests the threshold intervention alone. Energy--STAMP+ACI tests whether the
-strong CIFAR-100-C energy result can be retained while improving the weak
-CIFAR-10-C energy AUC. Both variants use the same datasets, corruption order,
-batch size, reset policy, and metrics as rounds 1 and 2. When available, their
-results will be accompanied by the ACI quantile trajectory and per-corruption
-ID-rejection and OOD-admission rates; these diagnostics are necessary because
-ACI controls admission calibration rather than directly optimizing AUC.
+\subsection{Pending Entropy+ACI Comparator}
+Entropy--STAMP+ACI holds STAMP's original score fixed and therefore isolates
+the threshold intervention. Its results are not yet available. When completed,
+they should use the same datasets, corruption order, batch size, reset policy,
+and metrics as the reported experiments, and should include the ACI quantile
+trajectory plus per-corruption ID-rejection and OOD-admission rates. These
+diagnostics are necessary because ACI controls admission calibration rather
+than directly optimizing AUC.
