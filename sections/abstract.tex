@@ -1,9 +1,28 @@
 \begin{abstract}
-This paper presents [briefly state the problem or research objective]. The
-proposed approach uses [summarize the main method, model, or system] to
-address [the specific challenge]. The method is evaluated using
-[dataset, experimental setup, or evaluation criteria]. The results indicate
-that [summarize the principal finding or contribution]. These findings
-demonstrate the potential of the proposed approach for [state the relevant
-application or broader significance].
+Open-world test-time adaptation must improve recognition under distribution
+shift without allowing unknown samples to corrupt the adaptation process.
+STAMP addresses this problem with consistency filtering, entropy-based
+admission to a class-balanced memory, and stable replay, but its detector and
+adaptation objective both depend on prediction entropy. We study whether
+outlier scores imported from out-of-distribution detection can provide a
+better admission signal while leaving the remainder of STAMP unchanged. Our
+first hypothesis was that distance to clean source features would separate
+outliers from shifted in-distribution samples and decouple detection from the
+adapting classifier. A K-nearest-neighbor (KNN) variant produced mixed evidence.
+On CIFAR-10-C with noise outliers it achieved 78.64\% accuracy but only 59.10\%
+AUC and a 63.61\% H-score; on CIFAR-100-C it achieved 45.73\%, 69.93\%, and
+54.15\%, respectively. Although KNN--STAMP improved accuracy over the frozen
+source model, test-time normalization obtained higher H-scores on both
+benchmarks. We hypothesize that severe corruption moves valid samples away
+from the clean reference bank, weakening a fixed feature-distance test. We
+therefore replace KNN with logit energy and a rolling, label-free threshold,
+which require neither source-reference retrieval nor additional model passes.
+The energy variant attains 57.14\% accuracy, 95.12\% AUC, and 71.33\% H-score
+on CIFAR-100-C, outperforming both baselines; on CIFAR-10-C, it reaches 78.99\%
+accuracy but 54.33\% AUC and a 63.80\% H-score. Thus, energy scoring is highly
+effective in the 100-class setting but does not consistently improve the joint
+recognition--rejection trade-off across datasets. A third, ongoing experiment
+uses adaptive conformal inference to calibrate the admission threshold online
+while holding the underlying score fixed; its results are reserved to test
+whether threshold drift, rather than score choice alone, explains this gap.
 \end{abstract}

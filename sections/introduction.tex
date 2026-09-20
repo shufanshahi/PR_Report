@@ -1,21 +1,83 @@
 \section{Introduction}
 
-[Introduce the broad research area and explain why the problem is important.]
-The increasing need for [application, capability, or outcome] has created
-new challenges in [research area]. Existing approaches often face limitations
-related to [limitation 1], [limitation 2], or [limitation 3]. Addressing these
-limitations is important because [explain the practical or scientific impact].
+Image classifiers are commonly trained under the assumption that deployment
+data follow the training distribution. In practice, image corruptions alter
+the input distribution, and an open-world stream can additionally contain
+samples from classes that were never observed during training. Test-time
+adaptation (TTA) uses unlabeled deployment data to reduce this mismatch, for
+example by updating normalization statistics or minimizing prediction
+entropy~\cite{schneider2020corruptions,wang2021tent}. The same unlabeled stream,
+however, may contain outliers. Updating a model on confidently misclassified
+outliers can reinforce its mistakes, so open-world TTA must jointly preserve
+known-class recognition and reject unknown inputs.
 
-This work focuses on [clearly state the specific problem]. The objective is
-to develop or evaluate [proposed method, model, or system] for
-[intended task]. The main contributions of this paper are as follows:
+STAMP was designed for this joint setting~\cite{yu2024stamp}. It averages
+predictions over augmented views, applies consistency and entropy filters,
+stores accepted samples in a class-balanced memory, and adapts normalization
+parameters through self-weighted entropy minimization with stable memory
+replay. This design improves the reliability of the update set, but prediction
+entropy has two responsibilities: it decides which samples may influence
+adaptation and it supplies the adaptation objective. A fixed, dataset-specific
+entropy cutoff must also remain suitable while the model and test distribution
+change. These observations led us to ask a narrow question: can the outlier
+detector be replaced by a signal from an adjacent field while the memory and
+optimization mechanisms of STAMP remain fixed?
+
+We investigate this question as a sequence of falsifiable interventions rather
+than assuming that a plausible replacement must improve performance. Our first
+hypothesis was that non-parametric KNN distance in the penultimate feature space
+would be more sensitive to unknown inputs than output entropy and less coupled
+to the model's changing confidence. We therefore cached normalized source
+features and used mean distance to the nearest references as the memory-admission
+and OOD score. The result was mixed. Relative to the frozen source model, the
+variant substantially improved known-class accuracy on both CIFAR-10-C and
+CIFAR-100-C with noise outliers. Relative to test-time normalization, however,
+it reduced AUC by 9.41 and 10.98 percentage points and reduced H-score by 6.97
+and 4.34 points, respectively. Thus, the experiment did not support the central
+expectation that source-feature distance would improve the joint recognition
+and rejection trade-off.
+
+Our working explanation is that the clean reference bank is itself the wrong
+anchor under severe corruption: the corruption moves in-distribution features
+as well as outlier features, so distance can reject useful samples and starve
+the memory of adaptation data. This is a diagnosis to be tested, not a
+conclusion inferred from aggregate metrics alone. It motivates our second
+hypothesis: free energy computed from the logits can improve admission without
+depending on a fixed source bank~\cite{liu2020energy}. The energy variant
+strongly supports this hypothesis on CIFAR-100-C, improving the H-score from
+54.15 for KNN--STAMP and 58.49 for test-time normalization to 71.33. However,
+its CIFAR-10-C AUC falls to 54.33, below both KNN--STAMP and normalization.
+This contrast shows that eliminating a stale feature bank is helpful but is not
+by itself a dataset-independent solution. The implementation records the
+rejection rate of ground-truth in-distribution samples and the admission rate
+of outliers for post-hoc diagnosis; these measurements are needed to explain
+the remaining CIFAR-10-C failure mode.
+
+The contrasting energy results also expose a limitation shared by the first two
+rounds: both ultimately convert a score into a hard admission decision using a
+threshold. Replacing the score does not by itself guarantee that this cutoff
+remains calibrated as the stream changes. Our third, ongoing intervention
+therefore imports adaptive conformal inference (ACI) from distribution-free
+statistics~\cite{gibbs2021aci}. ACI adjusts the score quantile online to target
+the desired rejection rate. We run it with the original entropy score to isolate
+threshold calibration, and with energy to test the combined intervention. The
+results are intentionally left pending.
+
+The contributions of this work are:
 \begin{itemize}
-    \item A [method, framework, dataset, or system] for [specific purpose].
-    \item An experimental evaluation based on [dataset, testbed, or metrics].
-    \item An analysis of the results, limitations, and applicability of the
-    proposed approach.
+    \item a controlled study of outlier scoring in STAMP that changes the
+    admission signal while preserving its consistency filter, balanced memory,
+    and replay objective;
+    \item evidence that KNN feature distance can improve classification yet
+    worsen the joint accuracy--detection trade-off under severe corruption; and
+    \item an energy-based follow-up with online thresholding that substantially
+    improves the joint metric on CIFAR-100-C, while revealing a remaining
+    dataset-dependent detection failure on CIFAR-10-C; and
+    \item an ongoing ACI threshold-calibration study that distinguishes the
+    effect of adaptive thresholding from the choice of entropy or energy score.
 \end{itemize}
 
-The remainder of this paper is organized as follows. Section II describes
-the methodology. Section III presents the experimental details. Section IV
-concludes the paper and discusses possible directions for future work.
+The remainder of the paper is organized as follows. Section~II reviews TTA,
+STAMP, OOD scores, and conformal calibration. Section~III describes the three
+interventions and evaluation protocol. Section~IV reports the available results
+and reserves the third-stage comparison. Section~V concludes the paper.

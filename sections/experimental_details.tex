@@ -1,24 +1,81 @@
-\section{Experimental Details}
+\section{Experimental Results}
 
-\subsection{Experimental Setup}
-Experiments are conducted using [hardware platform] with [processor, memory,
-and accelerator details, if applicable]. The implementation uses [software
-framework, programming language, and version]. The dataset contains
-[number] samples or observations, and the data are partitioned into
-[training], [validation], and [test] subsets.
+\subsection{Round-1 Results}
+Table~\ref{tab:main-results} reports the currently available means over the 15
+severity-5 corruption streams. On CIFAR-10-C with noise outliers, KNN--STAMP
+obtains the highest known-class accuracy, improving on the frozen source model
+by 21.30 points and on test-time normalization by 5.69 points. This gain does
+not transfer to outlier detection: its AUC is 9.41 points below normalization,
+and its H-score is 6.97 points lower. On CIFAR-100-C, KNN--STAMP improves all
+three metrics over the source model, but is approximately tied with
+normalization in accuracy ($-0.17$ points) while trailing it by 10.98 AUC points
+and 4.34 H-score points.
 
-\subsection{Implementation Parameters}
-The principal parameters are set as follows: [batch size] for the batch
-size, [learning rate] for the learning rate, and [number] for the number of
-training iterations or epochs. The optimizer is [optimizer], and the model
-uses [regularization, early stopping, augmentation, or other relevant
-technique]. Unless otherwise stated, all experiments use the same random
-seed and preprocessing procedure.
+These results neither show a uniform failure nor support the original
+hypothesis. The adaptation machinery remains useful for recognition, especially
+on CIFAR-10-C, but feature distance produces a poorer joint trade-off than the
+simple normalization baseline. Aggregate metrics cannot establish the cause;
+in particular, they do not reveal whether KNN rejects corrupted ID samples or
+admits noise outliers. The admission diagnostics added for round 2 are intended
+to distinguish these failure modes.
 
-\subsection{Results and Discussion}
-The proposed approach achieves [primary result] on [evaluation metric],
-compared with [baseline result] for [baseline method]. These results suggest
-that [interpret the main observation]. Additional analysis shows that
-[secondary observation, ablation result, or error pattern]. The main sources
-of uncertainty or limitation are [limitation], which should be considered
-when applying the method to [target setting].
+\begin{table}[t]
+    \caption{Mean results across 15 severity-5 corruptions. Acc., AUC, and
+    H-score are percentages. R1 uses KNN feature distance; R2 uses energy
+    scoring with percentile calibration; R3 ACI experiments are running.}
+    \label{tab:main-results}
+    \centering
+    \small
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{llrrr}
+        \hline
+        Dataset & Method & Acc. & AUC & H-score \\
+        \hline
+        CIFAR-10-C & Source & 57.34 & 70.39 & 62.32 \\
+        + Noise & Norm-test & 72.95 & 68.51 & \textbf{70.58} \\
+        & KNN--STAMP (R1) & \textbf{78.64} & 59.10 & 63.61 \\
+        & Energy--STAMP (R2) & \textbf{78.99} & 54.33 & 63.80 \\
+        & Entropy+ACI (R3) & \multicolumn{3}{c}{\emph{running}} \\
+        & Energy+ACI (R3) & \multicolumn{3}{c}{\emph{running}} \\
+        \hline
+        CIFAR-100-C & Source & 35.83 & 43.13 & 38.01 \\
+        + Noise & Norm-test & \textbf{45.90} & \textbf{80.91} & \textbf{58.49} \\
+        & KNN--STAMP (R1) & 45.73 & 69.93 & 54.15 \\
+        & Energy--STAMP (R2) & \textbf{57.14} & \textbf{95.12} & \textbf{71.33} \\
+        & Entropy+ACI (R3) & \multicolumn{3}{c}{\emph{running}} \\
+        & Energy+ACI (R3) & \multicolumn{3}{c}{\emph{running}} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsection{Round-2 Results}
+Energy--STAMP produces sharply different outcomes across the two benchmarks.
+On CIFAR-10-C, it increases accuracy only slightly relative to KNN--STAMP
+(78.99 versus 78.64) while decreasing AUC from 59.10 to 54.33. The H-score
+therefore remains low (63.80), 6.78 points below the normalization baseline.
+The second intervention consequently does not resolve the CIFAR-10-C
+recognition--rejection trade-off.
+
+On CIFAR-100-C, in contrast, energy--STAMP improves on KNN--STAMP by 11.41
+accuracy points, 25.19 AUC points, and 17.18 H-score points. It also exceeds
+test-time normalization by 11.24 points in accuracy, 14.21 points in AUC, and
+12.84 points in H-score. This is the strongest result in Table~\ref{tab:main-results}
+and supports the idea that logit energy can provide a more useful memory-admission
+signal than a fixed clean feature bank in the 100-class setting.
+
+The contrasting results prevent a universal claim for energy scoring. The next
+analysis should report ID rejection and OOD admission rates for entropy, KNN,
+and energy, with per-corruption results, to determine whether the low
+CIFAR-10-C AUC arises from score overlap, threshold calibration, or changes in
+the samples admitted to memory.
+
+\subsection{Round-3 Experiments in Progress}
+The pending round-3 rows evaluate adaptive conformal inference (ACI) as a
+threshold controller. Entropy--STAMP+ACI holds STAMP's original score fixed and
+tests the threshold intervention alone. Energy--STAMP+ACI tests whether the
+strong CIFAR-100-C energy result can be retained while improving the weak
+CIFAR-10-C energy AUC. Both variants use the same datasets, corruption order,
+batch size, reset policy, and metrics as rounds 1 and 2. When available, their
+results will be accompanied by the ACI quantile trajectory and per-corruption
+ID-rejection and OOD-admission rates; these diagnostics are necessary because
+ACI controls admission calibration rather than directly optimizing AUC.

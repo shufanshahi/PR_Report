@@ -1,0 +1,52 @@
+\section{Related Work}
+
+\subsection{Test-Time Adaptation}
+TTA adapts a trained model using unlabeled target samples available only during
+inference. A simple and competitive approach recomputes batch-normalization
+statistics from corrupted test batches~\cite{schneider2020corruptions}.
+Tent extends this principle by minimizing prediction entropy while updating
+normalization affine parameters online~\cite{wang2021tent}. Such objectives are
+effective under covariate shift, but confident errors can be amplified when the
+stream contains unknown classes. The corruption benchmarks used in this work
+derive from CIFAR-10-C and CIFAR-100-C, which evaluate robustness to common,
+non-adversarial corruptions~\cite{hendrycks2019benchmark}.
+
+\subsection{Open-World TTA and STAMP}
+Open-world TTA couples adaptation on known classes with detection of samples
+that should not participate in the update. STAMP addresses this setting using
+stable memory replay~\cite{yu2024stamp}. It aggregates predictions across
+augmentations, filters inconsistent or high-entropy examples, balances the
+memory across pseudo-classes, and minimizes a confidence-weighted entropy loss
+on replayed samples. Our work does not redesign this adaptation pipeline.
+Instead, it isolates the admission score, asking whether a detector developed
+outside TTA transfers successfully when the entire known-class distribution is
+also corrupted.
+
+\subsection{Out-of-Distribution Scoring}
+OOD detection provides several alternatives to entropy or maximum softmax
+probability. OpenMax uses extreme-value modeling of activation-space distances
+to assign probability to an unknown class~\cite{bendale2016openmax}. Deep KNN
+detects OOD samples by their non-parametric distance from in-distribution
+features and avoids an explicit Gaussian assumption~\cite{sun2022knn}. This
+motivated our first intervention, but its usual source-reference geometry may
+become unreliable when corruption shifts all test features.
+
+Energy-based OOD detection instead derives a scalar directly from classifier
+logits and was proposed to mitigate the overconfidence of softmax-based
+scores~\cite{liu2020energy}. Since it requires neither a stored reference bank
+nor an additional forward pass, it forms our second intervention. We also
+retain two optional mechanisms for analysis: a Weibull-tail threshold inspired
+by OpenMax~\cite{bendale2016openmax}, and evidential vacuity based on a
+Dirichlet representation of class probabilities~\cite{sensoy2018evidential}.
+Neither optional mechanism is included in the first-stage results.
+
+\subsection{Conformal Calibration Under Shift}
+Conformal methods calibrate predictive decisions from observed errors, but
+standard conformal guarantees rely on an exchangeability assumption that is
+inappropriate for a changing test stream. Adaptive conformal inference (ACI)
+updates its calibration parameter online and targets long-run coverage under an
+unknown, time-varying data-generating process~\cite{gibbs2021aci}. Our third
+intervention adapts this controller to memory admission: rather than proposing
+another OOD score, it adjusts the score quantile to target a specified
+outlier-rejection rate. This use is experimental; the original ACI guarantees
+concern conformal prediction coverage, not STAMP's OOD-detection metrics.

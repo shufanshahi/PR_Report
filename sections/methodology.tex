@@ -1,32 +1,156 @@
 \section{Methodology}
 
-\subsection{System Overview}
-The proposed methodology consists of [number] main stages: [stage 1],
-[stage 2], and [stage 3]. First, [describe the input acquisition or
-preprocessing step]. Next, [describe the central algorithm, model, or
-workflow]. Finally, [describe the output generation, decision process, or
-postprocessing step].
+\subsection{Problem Formulation}
+Let $f_{\theta}$ be a source-trained classifier with $C$ known classes and
+logits $\mathbf{z}(x)=f_{\theta}(x)$. At test time, the model observes an
+unlabeled stream containing corrupted in-distribution (ID) samples and
+out-of-distribution (OOD) samples. The model must predict the known-class label
+for ID samples, assign a score that separates ID from OOD samples, and update
+its parameters without using OOD samples as adaptation targets. No test label
+is used for adaptation or threshold fitting; labels are used only to compute
+evaluation metrics and post-hoc admission diagnostics.
 
-\subsection{Data Preparation}
-The study uses [name and description of the dataset or data source]. The
-data are prepared by [cleaning, normalization, transformation, annotation,
-or feature extraction procedure]. Any missing or invalid observations are
-handled using [procedure], and the data are divided into [training,
-validation, and test sets or other partitions] using [split strategy].
+Our experimental principle is to alter the outlier score while holding the
+remaining STAMP pipeline fixed. This makes a change in performance easier to
+attribute to the proposed intervention rather than to a simultaneous change in
+memory management or optimization.
 
-\subsection{Proposed Approach}
-Let $x$ denote the input and let $y$ denote the corresponding target. The
-proposed method learns a mapping
+\subsection{Baseline STAMP Pipeline}
+For each test input, STAMP evaluates the original image and 15 stochastic
+augmentations. Their class probabilities are averaged to obtain a stable
+prediction. A consistency mask removes samples for which the adapting branch
+and STAMP's normalization-only copy assign different labels. In the original
+method, an accepted sample must also have predictive entropy
 \begin{equation}
-    \hat{y} = f(x;\theta),
+    H(x)=-\sum_{c=1}^{C}\bar{p}_{c}(x)\log\bar{p}_{c}(x)
 \end{equation}
-where $f$ is the proposed model and $\theta$ represents its trainable
-parameters. The model is optimized using [loss function or optimization
-objective]. The design choices are motivated by [briefly explain the
-theoretical or practical rationale].
+below the margin $m=\alpha\log C$.
 
-\subsection{Evaluation Criteria}
-Performance is measured using [metric 1], [metric 2], and [metric 3]. These
-metrics are selected because they measure [explain what each metric captures].
-The proposed approach is compared with [baseline 1] and [baseline 2] under
-the same evaluation conditions.
+Accepted original views and their pseudo-labels are inserted into a memory of
+64 samples. When the memory is full, STAMP evicts from an over-represented
+pseudo-class to maintain class balance. Adaptation updates only normalization
+parameters and minimizes self-weighted entropy on the replay memory,
+\begin{align}
+    \mathcal{L}_{\mathrm{STAMP}}
+    &= \frac{1}{|\mathcal{M}|}\sum_{x_i\in\mathcal{M}}
+       \widetilde{w}_i H\!\left(f_{\theta}(x_i)\right), \\
+    w_i &= \exp\!\left[-H\!\left(f_{\theta}(x_i)\right)\right],
+\end{align}
+where the weights are normalized over the memory. The implementation preserves
+STAMP's sharpness-aware two-step update and cosine learning-rate schedule. The
+memory policy and loss remain unchanged in both interventions below.
+
+\subsection{Round 1: KNN Feature-Distance Score}
+The first hypothesis was that feature geometry would detect outliers that an
+entropy threshold misses and would reduce direct coupling between detection and
+the adaptation loss. Let $\mathbf{h}(x)$ be the penultimate feature and let
+$\mathcal{R}=\{\hat{\mathbf{r}}_j\}_{j=1}^{N}$ contain $\ell_2$-normalized
+features from clean source samples. For normalized test feature
+$\hat{\mathbf{h}}(x)$, we define
+\begin{equation}
+    s_{\mathrm{KNN}}(x)=1-\frac{1}{k}
+    \sum_{j\in\mathcal{N}_k(x)}
+    \hat{\mathbf{h}}(x)^{\top}\hat{\mathbf{r}}_j,
+    \label{eq:knn}
+\end{equation}
+where $\mathcal{N}_k(x)$ indexes the $k$ most similar reference features.
+Higher values indicate greater outlier-likeness. The implementation supports
+up to 2,000 reference samples with $k=10$ and leave-one-out reference
+similarities for cutoff calibration. This score replaces entropy for both
+memory admission and AUC computation; the consistency gate, pseudo-labeling,
+memory, and replay update are otherwise retained.
+
+The expected advantage of Eq.~\eqref{eq:knn} was independence from softmax
+confidence. The observed results did not show the expected AUC gain. We
+therefore treat the following explanation as a new hypothesis: at corruption
+severity 5, the ID feature cloud moves away from the clean reference bank, so a
+large KNN distance can indicate corruption rather than semantic novelty. The
+round-2 diagnostics described below directly test whether KNN rejects a larger
+fraction of true ID samples.
+
+\subsection{Round 2: Energy Score with Online Calibration}
+The second intervention removes the fixed feature reference. Given logits
+$\mathbf{z}(x)$ from the unaugmented view, its free energy is
+\begin{equation}
+    E_T(x)=-T\log\sum_{c=1}^{C}\exp\left(z_c(x)/T\right),
+    \label{eq:energy}
+\end{equation}
+where higher energy is treated as more OOD-like. We use $T=1$ initially.
+Equation~\eqref{eq:energy} uses logits already produced by STAMP and therefore
+adds no model forward pass or nearest-neighbor search.
+
+Rather than transferring a fixed cutoff between datasets, the default round-2
+configuration maintains the latest 1,000 scores and sets the admission
+threshold to their 80th percentile. The percentile matches the benchmark's
+80:20 ID/OOD mixture but uses no sample labels. During the first 256 samples,
+before the window is considered sufficiently populated, the original STAMP
+entropy margin is used. After warm-up, a sample enters memory when it passes
+the consistency filter and
+\begin{equation}
+    E_T(x) < \operatorname{Quantile}_{0.80}(\mathcal{B}_t),
+\end{equation}
+where $\mathcal{B}_t$ is the current score buffer. The cutoff is reset between
+corruption domains. The code also supports a Weibull fit to the upper score
+tail, but the percentile rule is the primary round-2 configuration.
+
+For diagnosis, entropy, KNN distance (when a reference bank is loaded), energy,
+and evidential vacuity are evaluated on a common outlier-likeness axis. For
+each score, we record the fraction of true ID samples rejected and true OOD
+samples admitted. These labels are never supplied to the adaptation rule; the
+rates are logged only after each admission decision. If energy also
+over-rejects corrupted ID samples, the implemented fallback removes the hard
+score gate and weights the entropy loss by one minus Dirichlet vacuity, but
+this fallback is not part of the reported round-1 experiment.
+
+\subsection{Round 3: Adaptive Conformal Thresholding}
+The first two rounds alter the outlier score but still require a threshold to
+turn that score into a memory-admission decision. Round 3 instead tests whether
+online threshold calibration can reduce errors caused by a stale cutoff. We use
+an ACI-inspired controller~\cite{gibbs2021aci} on the same rolling score buffer
+as round 2. Let $\rho=0.20$ be the target rejection rate and let $r_t$ be the
+fraction of the current batch rejected by the score threshold before the
+separate consistency filter is applied. The controller maintains a rejection
+parameter $\alpha_t$ and updates it as
+\begin{equation}
+    \alpha_{t+1}=\operatorname{clip}_{[0,1]}
+    \left(\alpha_t+\gamma(\rho-r_t)\right),
+    \label{eq:aci-update}
+\end{equation}
+where $\gamma$ is the controller step size. The admission cutoff is read at
+quantile $1-\alpha_t$ of the current buffer. Thus, if the observed score-based
+rejection rate exceeds the target, $\alpha_t$ decreases and the cutoff rises,
+admitting more samples on the next update. Rate feedback targets the mean
+batch rejection rate; an indicator-based alternative is retained only as an
+ablation.
+
+Round 3 has two running variants under the unchanged evaluation protocol:
+\emph{Entropy--STAMP+ACI} applies ACI to STAMP's original entropy score and
+isolates the threshold mechanism, while \emph{Energy--STAMP+ACI} combines ACI
+with the round-2 score. These variants test whether a score replacement, a
+threshold replacement, or both are needed. The ACI reference provides a
+long-run calibration result for conformal coverage under shift; it does not
+guarantee OOD AUC or H-score in this application. Those metrics, plus ID
+rejection and OOD admission rates, are therefore reported empirically when the
+running experiments finish.
+
+\subsection{Evaluation Protocol}
+We evaluate on CIFAR-10-C and CIFAR-100-C at severity 5 across the standard 15
+corruptions~\cite{hendrycks2019benchmark}. Each corruption stream contains
+10,000 corrupted ID images and 2,500 generated noise outliers, giving the 80:20
+mixture used by online calibration. ResNet-18 classifiers with 10 and 100
+outputs are evaluated in batches of 64, and the model is reset before each
+corruption domain. Results are averaged across all corruptions.
+
+The comparisons are the frozen source model, test-time normalization
+(\texttt{norm\_test}), and the modified STAMP variant. Known-class accuracy is
+computed only on ID samples. OOD performance is the area under the receiver
+operating characteristic curve (AUC), with higher score indicating ID. Their
+joint trade-off is summarized by
+\begin{equation}
+    H\text{-score}=\frac{2\,\mathrm{Acc}\,\mathrm{AUC}}
+    {\mathrm{Acc}+\mathrm{AUC}}.
+\end{equation}
+The results table reports KNN--STAMP and energy--STAMP under this shared
+protocol and reserves rows for the two ACI variants, allowing score and
+threshold choices to be compared without changing datasets, baselines, or
+metrics.
