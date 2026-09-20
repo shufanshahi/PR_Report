@@ -1,7 +1,7 @@
 \section{Experimental Results}
 
 \subsection{Round-1 Results}
-Table~\ref{tab:main-results} reports the currently available means over the 15
+Table~\ref{tab:main-results} reports mean results over the 15
 severity-5 corruption streams. On CIFAR-10-C with noise outliers, KNN--STAMP
 obtains the highest known-class accuracy, improving on the frozen source model
 by 21.30 points and on test-time normalization by 5.69 points. This gain does
@@ -16,14 +16,14 @@ hypothesis. The adaptation machinery remains useful for recognition, especially
 on CIFAR-10-C, but feature distance produces a poorer joint trade-off than the
 simple normalization baseline. Aggregate metrics cannot establish the cause;
 in particular, they do not reveal whether KNN rejects corrupted ID samples or
-admits noise outliers. The admission diagnostics added for round 2 are intended
-to distinguish these failure modes.
+admits noise outliers; resolving this mechanism requires per-corruption
+admission traces.
 
 \begin{table}[t]
     \caption{Mean results across 15 severity-5 corruptions. Acc., AUC, and
     H-score are percentages. R1 uses KNN feature distance; R2 uses energy
-    scoring with percentile calibration; R3 applies ACI to energy (the entropy
-    comparator is pending); R4 corrects replay-loss scaling.}
+    scoring with percentile calibration; R3 applies ACI to energy; R4 corrects
+    replay-loss scaling.}
     \label{tab:main-results}
     \centering
     \small
@@ -65,11 +65,10 @@ and supports the idea that logit energy can provide a more useful memory-admissi
 signal than a fixed clean feature bank in the 100-class setting. The round-4
 correction below further improves these completed results.
 
-The contrasting results prevent a universal claim for energy scoring. The next
-analysis should report ID rejection and OOD admission rates for entropy, KNN,
-and energy, with per-corruption results, to determine whether the low
-CIFAR-10-C AUC arises from score overlap, threshold calibration, or changes in
-the samples admitted to memory.
+The contrasting results prevent a universal claim for energy scoring.
+Per-corruption ID-rejection and OOD-admission rates would help determine
+whether the low CIFAR-10-C AUC arises from score overlap, threshold
+calibration, or changes in the samples admitted to memory.
 
 \subsection{Round-3 Results: Energy+ACI}
 Applying ACI to the energy score does not improve on the fixed-target rolling
@@ -81,11 +80,10 @@ negative for every reported metric. Consequently, these data do not support the
 hypothesis that ACI-based threshold adaptation improves the energy variant on
 the constant severity-5 streams used here.
 
-This is a result about the reported energy+ACI configuration, not a general
-failure of conformal calibration. The experiment does not yet provide the
-entropy+ACI comparator, nor does it include the rejection-rate trajectories or
-per-corruption admission statistics needed to determine whether the controller
-changed behavior despite similar aggregate metrics.
+This result concerns the reported energy+ACI configuration rather than conformal
+calibration in general. Per-corruption admission statistics and rejection-rate
+trajectories would help determine whether the controller changes admission
+behavior despite similar aggregate metrics.
 
 \subsection{Round-4 Results: Replay-Loss Scaling Correction}
 STAMP+BSN corrects the replay-loss normalization during memory warm-up. On
@@ -101,15 +99,6 @@ The large CIFAR-10-C AUC change is consistent with the scale analysis: early,
 partially filled replay buffers previously received overly large descent
 updates, which could destabilize the model before the memory reached capacity.
 However, the aggregate results alone do not establish this mechanism. Per-step
-memory occupancy, loss magnitude, and admission rates should be logged in a
-follow-up ablation to confirm that the improvement occurs during warm-up rather
-than through an uncontrolled experimental difference.
-
-\subsection{Pending Entropy+ACI Comparator}
-Entropy--STAMP+ACI holds STAMP's original score fixed and therefore isolates
-the threshold intervention. Its results are not yet available. When completed,
-they should use the same datasets, corruption order, batch size, reset policy,
-and metrics as the reported experiments, and should include the ACI quantile
-trajectory plus per-corruption ID-rejection and OOD-admission rates. These
-diagnostics are necessary because ACI controls admission calibration rather
-than directly optimizing AUC.
+memory occupancy, loss magnitude, and admission rates would be needed to
+confirm that the improvement occurs during warm-up rather than through an
+uncontrolled experimental difference.

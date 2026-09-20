@@ -3,7 +3,7 @@
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{theme}
 
-\RequirePackage{fontspec}
+\RequirePackage{iftex}
 \RequirePackage{tikz}
 \usetikzlibrary{calc,shadows,arrows.meta,positioning}
 \RequirePackage{tcolorbox}
@@ -15,17 +15,25 @@
 \RequirePackage{amsmath,amssymb}
 
 % ---------- Fonts ----------
-\setmainfont{PT Serif}[
-  BoldFont = {PT Serif Bold},
-  ItalicFont = {PT Serif Italic},
-  BoldItalicFont = {PT Serif Bold Italic}
-]
-\setsansfont{Lato}[
-  BoldFont = {Lato Bold},
-  ItalicFont = {Lato Italic},
-  BoldItalicFont = {Lato Bold Italic}
-]
-\renewcommand{\familydefault}{\sfdefault}
+% Use the intended system fonts with XeLaTeX or LuaLaTeX.  pdfLaTeX cannot
+% load fonts through fontspec, so it falls back to the standard LaTeX fonts.
+\ifPDFTeX
+  \RequirePackage[T1]{fontenc}
+  \renewcommand{\familydefault}{\sfdefault}
+\else
+  \RequirePackage{fontspec}
+  \setmainfont{PT Serif}[
+    BoldFont = {PT Serif Bold},
+    ItalicFont = {PT Serif Italic},
+    BoldItalicFont = {PT Serif Bold Italic}
+  ]
+  \setsansfont{Lato}[
+    BoldFont = {Lato Bold},
+    ItalicFont = {Lato Italic},
+    BoldItalicFont = {Lato Bold Italic}
+  ]
+  \renewcommand{\familydefault}{\sfdefault}
+\fi
 
 % ---------- Colors ----------
 \definecolor{Navy}{HTML}{1B2A4A}

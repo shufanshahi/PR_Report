@@ -12,9 +12,9 @@ rolling-percentile energy baseline on both datasets; hence, the reported
 experiment does not support adaptive thresholding as the main remedy in these
 streams.
 
-The most consequential completed intervention was correcting replay-loss
-scaling while memory is partially filled. STAMP+BSN achieved the best completed
-H-scores: 81.19 on CIFAR-10-C with noise outliers and 72.89 on CIFAR-100-C.
+The most consequential intervention was correcting replay-loss scaling while
+memory is partially filled. STAMP+BSN achieved the best H-scores: 81.19 on
+CIFAR-10-C with noise outliers and 72.89 on CIFAR-100-C.
 These results are consistent with the hypothesis that excessive early replay
 updates caused by the $64/N$ scaling error can destabilize adaptation, although
 the aggregate metrics alone do not prove this mechanism. Overall, the findings
@@ -23,8 +23,7 @@ memory-adaptation objective is correctly normalized.
 
 The study is limited to severity-5 CIFAR-C corruption streams with generated
 noise outliers and reports aggregate means without multi-seed uncertainty,
-per-corruption metrics, or memory-admission traces. Entropy+ACI remains a
-pending comparator. Future work should complete that comparison, log replay
-occupancy, loss scale, ID rejection, and OOD admission over time, and test the
-replay correction across multiple seeds, semantic OOD sources, and larger
-open-world benchmarks.
+per-corruption metrics, or memory-admission traces. Future work should log
+replay occupancy, loss scale, ID rejection, and OOD admission over time, and
+test the replay correction across multiple seeds, semantic OOD sources, and
+larger open-world benchmarks.

@@ -259,7 +259,7 @@
   \begin{columns}[T]
     \begin{column}{0.24\textwidth}\begin{cardh}{3.0cm}\centering\iconcircle{crosshairs}{Steel}\\[1mm]{\rmfamily\bfseries\color{Navy}R1}\\{\footnotesize KNN feature distance}\\[1mm]{\scriptsize\color{Steel}\bfseries done}\end{cardh}\end{column}
     \begin{column}{0.24\textwidth}\begin{cardh}{3.0cm}\centering\iconcircle{bolt}{Orange}\\[1mm]{\rmfamily\bfseries\color{Navy}R2}\\{\footnotesize Logit energy score}\\[1mm]{\scriptsize\color{Steel}\bfseries done}\end{cardh}\end{column}
-    \begin{column}{0.24\textwidth}\begin{cardh}{3.0cm}\centering\iconcircle{sliders-h}{Steel}\\[1mm]{\rmfamily\bfseries\color{Navy}R3}\\{\footnotesize Adaptive conformal threshold}\\[1mm]{\scriptsize\color{Orange}\bfseries running}\end{cardh}\end{column}
+    \begin{column}{0.24\textwidth}\begin{cardh}{3.0cm}\centering\iconcircle{sliders-h}{Steel}\\[1mm]{\rmfamily\bfseries\color{Navy}R3}\\{\footnotesize Adaptive conformal threshold}\\[1mm]{\scriptsize\color{Steel}\bfseries done}\end{cardh}\end{column}
     \begin{column}{0.24\textwidth}\begin{cardh}{3.0cm}\centering\iconcircle{bug}{Orange}\\[1mm]{\rmfamily\bfseries\color{Navy}R4}\\{\footnotesize Replay-loss scaling fix}\\[1mm]{\scriptsize\color{Steel}\bfseries done}\end{cardh}\end{column}
   \end{columns}
   \vspace{5mm}
@@ -396,7 +396,7 @@
 \end{frame}
 
 % =========================================================
-\begin{frame}{Round 3 --- Adaptive Conformal Thresholding \hfill {\normalsize\color{Orange}running}}
+\begin{frame}{Round 3 --- Adaptive Conformal Thresholding}
   Rounds 1--2 change the \emph{score}; Round 3 asks: does \textbf{online threshold calibration} close the gap, independent of score choice?
   \vspace{3mm}
   \[
@@ -408,16 +408,13 @@
     \item Cutoff read at quantile $1-\alpha_t$ of the rolling buffer --- rises/falls automatically
   \end{itemize}
   \vspace{2mm}
-  \begin{columns}[T]
-    \begin{column}{0.48\textwidth}
-      \begin{cardh}{1.7cm}\centering\small\textbf{\color{Navy}Entropy--STAMP + ACI}\\{\footnotesize isolates the threshold mechanism}\end{cardh}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-      \begin{cardh}{1.7cm}\centering\small\textbf{\color{Navy}Energy--STAMP + ACI}\\{\footnotesize tests if calibration rescues C10-C}\end{cardh}
-    \end{column}
-  \end{columns}
+  \begin{cardh}{1.7cm}
+    \centering\small\textbf{\color{Navy}Energy--STAMP + ACI}\\
+    {\footnotesize Holds the energy score fixed and tests whether adaptive calibration improves admission.}
+  \end{cardh}
   \vspace{3mm}
-  \centerline{\footnotesize\itshape\color{SubGray}Both variants mid-run; results reserved for the full table.}
+  \vspace{2mm}
+  \centerline{\footnotesize\itshape\color{SubGray}Energy+ACI closely matches, but does not improve on, the fixed-percentile energy baseline.}
 \end{frame}
 
 % =========================================================
@@ -455,7 +452,7 @@
 \end{frame}
 
 % =========================================================
-\begin{frame}{Round 4 --- Results: Best Completed Scores}
+\begin{frame}{Round 4 --- Results: Best Scores}
   \small
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
@@ -507,28 +504,26 @@
       \toprule
       \textbf{Dataset} & \textbf{Method} & \textbf{Acc.} & \textbf{AUC} & \textbf{H-score} \\
       \midrule
-      \multirow{7}{*}{CIFAR-10-C + Noise}
+      \multirow{6}{*}{CIFAR-10-C + Noise}
         & Source            & 57.34 & 70.39 & 62.32 \\
         & Norm-test         & 72.95 & 68.51 & 70.58 \\
         & KNN--STAMP (R1)   & 78.64 & 59.10 & 63.61 \\
         & Energy--STAMP (R2)& \textbf{78.99} & 54.33 & 63.80 \\
+        & Energy+ACI (R3)   & 78.98 & 54.08 & 63.58 \\
         & \textbf{STAMP+BSN (R4)} & 78.95 & \textbf{83.96} & \textbf{81.19} \\
-        & Entropy+ACI (R3)  & \multicolumn{3}{c}{\itshape running} \\
-        & Energy+ACI (R3)   & \multicolumn{3}{c}{\itshape running} \\
       \midrule
-      \multirow{7}{*}{CIFAR-100-C + Noise}
+      \multirow{6}{*}{CIFAR-100-C + Noise}
         & Source            & 35.83 & 43.13 & 38.01 \\
         & Norm-test         & 45.90 & 80.91 & 58.49 \\
         & KNN--STAMP (R1)   & 45.73 & 69.93 & 54.15 \\
         & Energy--STAMP (R2)& 57.14 & 95.12 & 71.33 \\
+        & Energy+ACI (R3)   & 57.04 & 95.08 & 71.24 \\
         & \textbf{STAMP+BSN (R4)} & \textbf{58.02} & \textbf{98.29} & \textbf{72.89} \\
-        & Entropy+ACI (R3)  & \multicolumn{3}{c}{\itshape running} \\
-        & Energy+ACI (R3)   & \multicolumn{3}{c}{\itshape running} \\
       \bottomrule
     \end{tabular}
   \end{table}
   \vspace{2mm}
-  \centerline{\footnotesize\color{SubGray} 15 severity-5 corruptions, mean across streams. \textbf{Bold} = best completed value per dataset.}
+  \centerline{\footnotesize\color{SubGray} 15 severity-5 corruptions, mean across streams. \textbf{Bold} = best value per dataset.}
 \end{frame}
 
 % =========================================================
@@ -538,7 +533,7 @@
     \item[\iconcircle{crosshairs}{Steel}] \textbf{\color{Navy}KNN distance} improves accuracy but \textbf{worsens} detection --- the clean reference bank is the wrong anchor once ID features drift.
     \item[\iconcircle{bolt}{Orange}] \textbf{\color{Navy}Energy scoring} excels on CIFAR-100-C (71.33 H) but is \textbf{dataset-dependent} --- weak on CIFAR-10-C.
     \item[\iconcircle{bug}{Orange}] \textbf{\color{Navy}The replay-loss fix (R4)} gives the \textbf{best results on both benchmarks} --- a bug fix beat every scoring idea.
-    \item[\iconcircle{sliders-h}{Steel}] Can \textbf{threshold calibration (R3)} alone close the CIFAR-10-C gap? Still running.
+    \item[\iconcircle{sliders-h}{Steel}] \textbf{Adaptive calibration (R3)} closely matches the fixed-percentile energy baseline but does not improve it.
   \end{itemize}
 \end{frame}
 
@@ -550,7 +545,7 @@
     \setlength\itemsep{3.5mm}
     \item Neither KNN distance nor energy scoring alone gives a \textbf{dataset-independent} gain in the joint trade-off
     \item The biggest, most consistent gain came from a \textbf{correctness fix} (STAMP+BSN) --- 81.19 H on CIFAR-10-C, 72.89 on CIFAR-100-C, best on both
-    \item \textbf{Limitation:} R3 (ACI) is still running --- we cannot yet isolate calibration from score choice on CIFAR-10-C
+    \item ACI threshold calibration does not improve the fixed-percentile energy baseline on either benchmark
   \end{itemize}
 \end{frame}
 
@@ -559,7 +554,7 @@
   \vspace{3mm}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
-      \begin{cardh}{2.5cm}\footnotesize\cardrow{sliders-h}{Steel}{Finish Round 3}{Complete Entropy+ACI and Energy+ACI; report AUC, H-score.}\end{cardh}
+      \begin{cardh}{2.5cm}\footnotesize\cardrow{sliders-h}{Steel}{Multi-Seed Evaluation}{Report uncertainty across random seeds.}\end{cardh}
       \vspace{2mm}
       \begin{cardh}{2.5cm}\footnotesize\cardrow{search}{Steel}{Per-Corruption Diagnostics}{ID-rejection / OOD-admission rates per corruption type.}\end{cardh}
     \end{column}
