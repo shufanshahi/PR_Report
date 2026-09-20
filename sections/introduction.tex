@@ -63,6 +63,18 @@ the desired rejection rate. We run it with the original entropy score to isolate
 threshold calibration, and with energy to test the combined intervention. The
 results are intentionally left pending.
 
+Finally, we found a separate implementation-level issue in the replay loss.
+STAMP uses confidence-weighted entropy over a memory of capacity 64, but the
+memory is repeatedly reset and initially contains fewer than 64 accepted
+samples. The prior implementation normalized the weights for capacity 64 and
+then averaged over the actual replay size, unintentionally multiplying the loss
+and descent gradient by $64/N$ when $N<64$. Our fourth intervention replaces
+this capacity constant with the actual replay size. Unlike the preceding score
+and threshold experiments, this is a correctness fix: its purpose is to make
+the intended confidence-weighted average independent of memory occupancy.
+It yields the best completed H-scores on both benchmarks, including 81.19 on
+CIFAR-10-C and 72.89 on CIFAR-100-C.
+
 The contributions of this work are:
 \begin{itemize}
     \item a controlled study of outlier scoring in STAMP that changes the
@@ -74,10 +86,13 @@ The contributions of this work are:
     improves the joint metric on CIFAR-100-C, while revealing a remaining
     dataset-dependent detection failure on CIFAR-10-C; and
     \item an ongoing ACI threshold-calibration study that distinguishes the
-    effect of adaptive thresholding from the choice of entropy or energy score.
+    effect of adaptive thresholding from the choice of entropy or energy score;
+    and
+    \item a batch-size-invariant replay-loss correction that removes a $64/N$
+    warm-up scaling error and produces the best completed joint results.
 \end{itemize}
 
 The remainder of the paper is organized as follows. Section~II reviews TTA,
-STAMP, OOD scores, and conformal calibration. Section~III describes the three
-interventions and evaluation protocol. Section~IV reports the available results
-and reserves the third-stage comparison. Section~V concludes the paper.
+STAMP, OOD scores, and conformal calibration. Section~III describes the four
+interventions and evaluation protocol. Section~IV reports the completed results
+and reserves the ACI comparison. Section~V concludes the paper.

@@ -24,5 +24,12 @@ effective in the 100-class setting but does not consistently improve the joint
 recognition--rejection trade-off across datasets. A third, ongoing experiment
 uses adaptive conformal inference to calibrate the admission threshold online
 while holding the underlying score fixed; its results are reserved to test
-whether threshold drift, rather than score choice alone, explains this gap.
+whether threshold drift, rather than score choice alone, explains this gap. A
+fourth intervention corrects an implementation error in STAMP's replay loss:
+when memory was partially filled, a hard-coded capacity factor scaled gradients
+by $64/N$ instead of using the current replay size $N$. Replacing this factor
+with $N$ yields 78.95\% accuracy, 83.96\% AUC, and an 81.19\% H-score on
+CIFAR-10-C, and 58.02\%, 98.29\%, and 72.89\% on CIFAR-100-C. These are the
+best completed H-scores, showing that correct replay-loss scaling can matter as
+much as the choice of outlier score.
 \end{abstract}

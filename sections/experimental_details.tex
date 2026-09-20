@@ -22,7 +22,8 @@ to distinguish these failure modes.
 \begin{table}[t]
     \caption{Mean results across 15 severity-5 corruptions. Acc., AUC, and
     H-score are percentages. R1 uses KNN feature distance; R2 uses energy
-    scoring with percentile calibration; R3 ACI experiments are running.}
+    scoring with percentile calibration; R3 ACI experiments are running; R4
+    corrects replay-loss scaling.}
     \label{tab:main-results}
     \centering
     \small
@@ -35,6 +36,7 @@ to distinguish these failure modes.
         + Noise & Norm-test & 72.95 & 68.51 & \textbf{70.58} \\
         & KNN--STAMP (R1) & \textbf{78.64} & 59.10 & 63.61 \\
         & Energy--STAMP (R2) & \textbf{78.99} & 54.33 & 63.80 \\
+        & STAMP+BSN (R4) & 78.95 & \textbf{83.96} & \textbf{81.19} \\
         & Entropy+ACI (R3) & \multicolumn{3}{c}{\emph{running}} \\
         & Energy+ACI (R3) & \multicolumn{3}{c}{\emph{running}} \\
         \hline
@@ -42,6 +44,7 @@ to distinguish these failure modes.
         + Noise & Norm-test & \textbf{45.90} & \textbf{80.91} & \textbf{58.49} \\
         & KNN--STAMP (R1) & 45.73 & 69.93 & 54.15 \\
         & Energy--STAMP (R2) & \textbf{57.14} & \textbf{95.12} & \textbf{71.33} \\
+        & STAMP+BSN (R4) & \textbf{58.02} & \textbf{98.29} & \textbf{72.89} \\
         & Entropy+ACI (R3) & \multicolumn{3}{c}{\emph{running}} \\
         & Energy+ACI (R3) & \multicolumn{3}{c}{\emph{running}} \\
         \hline
@@ -61,13 +64,32 @@ accuracy points, 25.19 AUC points, and 17.18 H-score points. It also exceeds
 test-time normalization by 11.24 points in accuracy, 14.21 points in AUC, and
 12.84 points in H-score. This is the strongest result in Table~\ref{tab:main-results}
 and supports the idea that logit energy can provide a more useful memory-admission
-signal than a fixed clean feature bank in the 100-class setting.
+signal than a fixed clean feature bank in the 100-class setting. The round-4
+correction below further improves these completed results.
 
 The contrasting results prevent a universal claim for energy scoring. The next
 analysis should report ID rejection and OOD admission rates for entropy, KNN,
 and energy, with per-corruption results, to determine whether the low
 CIFAR-10-C AUC arises from score overlap, threshold calibration, or changes in
 the samples admitted to memory.
+
+\subsection{Round-4 Results: Replay-Loss Scaling Correction}
+STAMP+BSN corrects the replay-loss normalization during memory warm-up. On
+CIFAR-10-C, it preserves the energy variant's accuracy (78.95 versus 78.99)
+while increasing AUC from 54.33 to 83.96 and H-score from 63.80 to 81.19. It
+therefore exceeds test-time normalization by 6.00 accuracy points, 15.45 AUC
+points, and 10.61 H-score points. On CIFAR-100-C, STAMP+BSN reaches 58.02
+accuracy, 98.29 AUC, and 72.89 H-score, improving on energy--STAMP by 0.88,
+3.17, and 1.56 points, respectively. It also exceeds normalization by 12.12
+accuracy points, 17.38 AUC points, and 14.40 H-score points.
+
+The large CIFAR-10-C AUC change is consistent with the scale analysis: early,
+partially filled replay buffers previously received overly large descent
+updates, which could destabilize the model before the memory reached capacity.
+However, the aggregate results alone do not establish this mechanism. Per-step
+memory occupancy, loss magnitude, and admission rates should be logged in a
+follow-up ablation to confirm that the improvement occurs during warm-up rather
+than through an uncontrolled experimental difference.
 
 \subsection{Round-3 Experiments in Progress}
 The pending round-3 rows evaluate adaptive conformal inference (ACI) as a

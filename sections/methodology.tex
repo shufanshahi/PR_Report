@@ -27,7 +27,7 @@ method, an accepted sample must also have predictive entropy
 below the margin $m=\alpha\log C$.
 
 Accepted original views and their pseudo-labels are inserted into a memory of
-64 samples. When the memory is full, STAMP evicts from an over-represented
+capacity 64. When the memory is full, STAMP evicts from an over-represented
 pseudo-class to maintain class balance. Adaptation updates only normalization
 parameters and minimizes self-weighted entropy on the replay memory,
 \begin{align}
@@ -35,10 +35,12 @@ parameters and minimizes self-weighted entropy on the replay memory,
     &= \frac{1}{|\mathcal{M}|}\sum_{x_i\in\mathcal{M}}
        \widetilde{w}_i H\!\left(f_{\theta}(x_i)\right), \\
     w_i &= \exp\!\left[-H\!\left(f_{\theta}(x_i)\right)\right],
+    \qquad
+    \widetilde{w}_i=\frac{|\mathcal{M}|w_i}{\sum_j w_j}.
 \end{align}
-where the weights are normalized over the memory. The implementation preserves
-STAMP's sharpness-aware two-step update and cosine learning-rate schedule. The
-memory policy and loss remain unchanged in both interventions below.
+The normalized weights sum to the current replay size, so the outer mean is a
+proper confidence-weighted average. The implementation preserves STAMP's
+sharpness-aware two-step update and cosine learning-rate schedule.
 
 \subsection{Round 1: KNN Feature-Distance Score}
 The first hypothesis was that feature geometry would detect outliers that an
@@ -133,6 +135,35 @@ guarantee OOD AUC or H-score in this application. Those metrics, plus ID
 rejection and OOD admission rates, are therefore reported empirically when the
 running experiments finish.
 
+\subsection{Round 4: Batch-Size-Invariant Replay Weighting}
+Round 4 addresses an implementation error in the replay objective rather than
+changing an outlier score or threshold. Let $N=|\mathcal{M}|$ be the number of
+samples currently stored in the replay memory. The intended normalized
+coefficient is
+\begin{equation}
+    \widetilde{w}_i=\frac{Nw_i}{\sum_j w_j},
+    \qquad
+    \mathcal{L}=\frac{1}{N}\sum_i\widetilde{w}_iH_i.
+    \label{eq:batch-normalized-loss}
+\end{equation}
+Before the correction, the implementation used the memory capacity 64 in place
+of $N$. For a partially filled memory, this produced
+\begin{equation}
+    \mathcal{L}_{\mathrm{old}}=\frac{64}{N}\mathcal{L},
+    \label{eq:loss-scale-error}
+\end{equation}
+so the loss and the raw descent gradient were inflated by up to $64\times$
+immediately after memory reset. This is particularly consequential because the
+memory is reset at each corruption domain and fills only with samples admitted
+by the filtering pipeline.
+
+We replace the capacity constant by the actual replay size in both evaluations
+of the sharpness-aware update. The corrected coefficients always sum to $N$;
+therefore, the full-memory behavior ($N=64$) is unchanged and only the warm-up
+updates are rescaled. We denote this variant \emph{STAMP+BSN}, where BSN means
+batch-size normalization. It is evaluated under the same protocol as the prior
+rounds and is compared with their reported results.
+
 \subsection{Evaluation Protocol}
 We evaluate on CIFAR-10-C and CIFAR-100-C at severity 5 across the standard 15
 corruptions~\cite{hendrycks2019benchmark}. Each corruption stream contains
@@ -150,7 +181,7 @@ joint trade-off is summarized by
     H\text{-score}=\frac{2\,\mathrm{Acc}\,\mathrm{AUC}}
     {\mathrm{Acc}+\mathrm{AUC}}.
 \end{equation}
-The results table reports KNN--STAMP and energy--STAMP under this shared
-protocol and reserves rows for the two ACI variants, allowing score and
-threshold choices to be compared without changing datasets, baselines, or
-metrics.
+The results table reports KNN--STAMP, energy--STAMP, and STAMP+BSN under this
+shared protocol and reserves rows for the two ACI variants. This allows score,
+threshold, and replay-loss choices to be compared without changing datasets,
+baselines, or metrics.
