@@ -16,7 +16,7 @@
     \vspace{3mm}
     {\rmfamily\bfseries\color{white}\fontsize{15}{19}\selectfont Outlier-Aware Admission for\\Open-World Test-Time Adaptation}\par
     \vspace{3mm}
-    {\sffamily\color{LightSub}\small Pattern Recognition --- CSE 4835 \quad\textbar\quad Final Presentation}\par
+    {\sffamily\color{LightSub}\small Pattern Recognition \quad\textbar\quad CSE 4835 \quad\textbar\quad Final Presentation}\par
     \vspace{9mm}
     {\sffamily
     \foreach \name/\id in {Shufan Shahi/210041210,Abdullah Al Jubaer Gem/210041226,Asif Or Rashid Alif/210041254,Ibrahima Mamoudou/210041259} {
@@ -26,526 +26,272 @@
 \end{navyframe}
 
 % =========================================================
-\begin{frame}{Outline}
-  \begin{columns}[T]
-    \begin{column}{0.48\textwidth}
-      \sectiontag{Recap}\\[2mm]
-      \begin{enumerate}
-        \setlength\itemsep{2mm}
-        \item Motivation \& what is TTA
-        \item An illustrative TTA pipeline
-        \item Evolution \& foundational methods
-        \item Challenges and the research gap
-        \item Our chosen direction: open-world TTA
-      \end{enumerate}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-      \sectiontag{This Work}\\[2mm]
-      \begin{enumerate}
-        \setcounter{enumi}{5}
-        \setlength\itemsep{2mm}
-        \item STAMP: the pipeline we build on
-        \item Four falsifiable interventions
-        \item Results \& analysis
-        \item Conclusion \& future work
-      \end{enumerate}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-% =========================================================
-\section{Recap}
 \begin{frame}{Motivation}
-  \begin{columns}[T]
-    \begin{column}{0.52\textwidth}
-      \begin{itemize}
-        \setlength\itemsep{3.5mm}
-        \item Deployment data rarely matches training data
-        \item[] \textbf{\color{Navy}Distribution shift} --- mismatch between source and target distributions
-        \item Accuracy degrades sharply once shift appears
-        \item Retraining is often impossible: no source data, no labels, must react instantly
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.44\textwidth}
-      \begin{cardh}{3.1cm}
-        \cardrow{sun}{Steel}{Train}{Clean, uncorrupted source data}
-      \end{cardh}
-      \centerline{\color{Orange}\footnotesize\bfseries\itshape $\downarrow$ distribution shift}
-      \begin{cardh}{3.1cm}
-        \cardrow{cloud-rain}{Orange}{Test}{Corrupted \emph{and} open-world: unknown classes too}
-      \end{cardh}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-% =========================================================
-\begin{frame}{What Is Test-Time Adaptation?}
-  \begin{quote}
-    \itshape\color{Navy}``Adapting a pretrained model to unlabeled test data --- on the fly, at deployment.''
-  \end{quote}
-  \vspace{1mm}
-  TTA updates a source-trained model using only the unlabeled target stream, guided by self-supervised signals (entropy, pseudo-labels, feature statistics) --- no retraining, no target labels.
-  \vspace{3mm}
-
-  \sectiontag{Core assumptions}
-  \vspace{2mm}
-  \begin{columns}[T]
-    \begin{column}{0.25\textwidth}\begin{cardh}{2.6cm}\cardcol{ban}{Steel}{No Source Data}{}\end{cardh}\end{column}
-    \begin{column}{0.25\textwidth}\begin{cardh}{2.6cm}\cardcol{eye-slash}{Steel}{No Target Labels}{}\end{cardh}\end{column}
-    \begin{column}{0.25\textwidth}\begin{cardh}{2.6cm}\cardcol{robot}{Steel}{Model Access Only}{}\end{cardh}\end{column}
-    \begin{column}{0.25\textwidth}\begin{cardh}{2.6cm}\cardcol{bolt}{Steel}{Online \& Limited}{}\end{cardh}\end{column}
-  \end{columns}
-\end{frame}
-
-% =========================================================
-\begin{frame}{Example: CIFAR-10 $\to$ CIFAR-10-C}
+  \begin{itemize}
+    \setlength\itemsep{5mm}
+    \item \textbf{\color{Navy}Distribution shift:} test data differs from training data
+    \item Accuracy drops sharply. Retraining is usually impossible.
+    \item \textbf{\color{Navy}Test-Time Adaptation:} adapt a pretrained model online, using only the unlabeled test stream
+    \item No source data. No target labels. Model access only.
+  \end{itemize}
   \vspace{6mm}
-  \begin{columns}[T]
-    \begin{column}{0.22\textwidth}\begin{cardh}{3.1cm}\cardcol{database}{Steel}{1. Source Model}{Pretrained on clean CIFAR-10}\end{cardh}\end{column}
-    \begin{column}{0.03\textwidth}\vspace{14mm}\centering{\color{Steel}\Large$\to$}\end{column}
-    \begin{column}{0.22\textwidth}\begin{cardh}{3.1cm}\cardcol{cloud-showers-heavy}{Orange}{2. Shifted Batch}{Noise, blur, fog arrive}\end{cardh}\end{column}
-    \begin{column}{0.03\textwidth}\vspace{14mm}\centering{\color{Steel}\Large$\to$}\end{column}
-    \begin{column}{0.22\textwidth}\begin{cardh}{3.1cm}\cardcol{sync-alt}{Steel}{3. Adapt}{Update BN stats, minimize entropy}\end{cardh}\end{column}
-    \begin{column}{0.03\textwidth}\vspace{14mm}\centering{\color{Steel}\Large$\to$}\end{column}
-    \begin{column}{0.22\textwidth}\begin{cardh}{3.1cm}\cardcol{check-circle}{Orange}{4. Adapted Prediction}{Better on the shifted stream}\end{cardh}\end{column}
-  \end{columns}
-  \vspace{7mm}
-  \centerline{\itshape\color{SubGray}\footnotesize No labels used at any point --- same protocol as CIFAR-10-C / CIFAR-100-C later.}
-\end{frame}
-
-% =========================================================
-\begin{frame}{Evolution \& Foundational Methods}
-  \begin{columns}[T]
-    \begin{column}{0.46\textwidth}
-      \sectiontag{From transfer learning to TTA}\\[2.5mm]
-      {\small\textbf{\color{Navy}1. Transfer Learning}}\\[0.5mm]
-      \centerline{\color{Orange}\scriptsize $\downarrow$ drop target labels}
-      {\small\textbf{\color{Navy}2. Domain Adaptation}}\\[0.5mm]
-      \centerline{\color{Orange}\scriptsize $\downarrow$ drop source data}
-      {\small\textbf{\color{Navy}3. Source-Free DA}}\\[0.5mm]
-      \centerline{\color{Orange}\scriptsize $\downarrow$ go online / streaming}
-      {\small\textbf{\color{Navy}4. Test-Time Adaptation}}
-      \vspace{2mm}
-
-      \sectiontag{Applications}\\[1.5mm]
-      {\footnotesize Driving, medical imaging, robotics, segmentation, OOD detection, VLMs}
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      \sectiontag{Key methods this work builds on}\\[1mm]
-      \begin{cardh}{1.3cm}\footnotesize\cardrow{campground}{Steel}{Tent \textnormal{\small(ICLR'21)}}{Entropy min.\ on BN params --- base loss}\end{cardh}
-      \vspace{1.5mm}
-      \begin{cardh}{1.3cm}\footnotesize\cardrow{filter}{Steel}{EATA \textnormal{\small(ICML'22)}}{Filters unreliable high-entropy samples}\end{cardh}
-      \vspace{1.5mm}
-      \begin{cardh}{1.3cm}\footnotesize\cardrow{balance-scale}{Steel}{SAR \textnormal{\small(ICLR'23)}}{Sharpness-aware --- STAMP's optimizer}\end{cardh}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-% =========================================================
-\begin{frame}{Challenges $\to$ Research Gap}
-  \begin{columns}[T]
-    \begin{column}{0.5\textwidth}
-      \sectiontag{Known challenges}\\[2mm]
-      \begin{itemize}
-        \setlength\itemsep{2.6mm}
-        \item \textbf{\color{Navy}Catastrophic forgetting} under continual updates
-        \item \textbf{\color{Navy}Confirmation bias} from noisy pseudo-labels
-        \item \textbf{\color{Navy}Unstable optimization} under severe shift
-        \item \textbf{\color{Navy}Warm-up statistics} are unreliable
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.5\textwidth}
-      \sectiontag{The open-world gap}\\[2mm]
-      \begin{itemize}
-        \setlength\itemsep{2.6mm}
-        \item Most TTA assumes a \emph{closed world}: every sample is a known class
-        \item Real streams contain \textbf{\color{Navy}unknown-class outliers}
-        \item Adapting on confident errors \textbf{reinforces mistakes}
-        \item Joint recognition + rejection is \textbf{under-explored}
-      \end{itemize}
-    \end{column}
-  \end{columns}
-  \vspace{4mm}
   \begin{card}
-    \centering\sffamily\color{Navy} Our target: stay accurate \emph{and} learn to reject what the model has never seen.
+    \centering\sffamily\color{Navy}
+    Open-world TTA: stay accurate on known classes, and reject unknown ones.
   \end{card}
 \end{frame}
 
 % =========================================================
-\begin{frame}{Our Chosen Direction}
-  \begin{cardh}{2.7cm}
-  \centering
-  \iconcircle{compass}{Orange}\\[2mm]
-  {\sffamily\color{Navy}\large Open-world TTA: stay accurate \textbf{without} letting unknown samples corrupt the update.}
-  \end{cardh}
-  \vspace{5mm}
+\section{Recap}
+\begin{frame}{Foundations}
+  \sectiontag{Built on}
+  \vspace{3mm}
+  \begin{columns}[T]
+    \begin{column}{0.32\textwidth}\begin{cardh}{2.2cm}\centering\iconcircle{campground}{Steel}\\[1.5mm]{\rmfamily\bfseries\color{Navy}Tent}\\{\scriptsize\color{SubGray}ICLR'21}\end{cardh}\end{column}
+    \begin{column}{0.32\textwidth}\begin{cardh}{2.2cm}\centering\iconcircle{filter}{Steel}\\[1.5mm]{\rmfamily\bfseries\color{Navy}EATA}\\{\scriptsize\color{SubGray}ICML'22}\end{cardh}\end{column}
+    \begin{column}{0.32\textwidth}\begin{cardh}{2.2cm}\centering\iconcircle{balance-scale}{Steel}\\[1.5mm]{\rmfamily\bfseries\color{Navy}SAR}\\{\scriptsize\color{SubGray}ICLR'23}\end{cardh}\end{column}
+  \end{columns}
+  \vspace{6mm}
+  \sectiontag{The gap}
+  \vspace{3mm}
+  \begin{itemize}
+    \setlength\itemsep{2.5mm}
+    \item Most TTA assumes a \textbf{closed world}
+    \item Real streams contain \textbf{unknown-class outliers}
+    \item Joint recognition and rejection: under-explored
+  \end{itemize}
+\end{frame}
+
+% =========================================================
+\begin{frame}{Our Direction}
   \begin{itemize}
     \setlength\itemsep{4mm}
-    \item We adopt \textbf{\color{Navy}STAMP} (Yu et al., ECCV 2024) --- built for exactly this joint setting
-    \item Its detector \emph{and} its adaptation objective both rely on \textbf{prediction entropy} --- one signal, two jobs
-    \item \textbf{Research question:} can the detector be replaced by a signal from OOD detection, leaving the rest of STAMP untouched?
+    \item We build on \textbf{\color{Navy}STAMP} (Yu et al., ECCV 2024)
+    \item Its detector doubles as the adaptation loss: one signal, two jobs
   \end{itemize}
+  \vspace{6mm}
+  \begin{card}
+    \centering\sffamily\color{Navy}
+    \textbf{Research question:} can we replace just the detector, and leave the rest of STAMP untouched?
+  \end{card}
 \end{frame}
 
 % =========================================================
 \section{This Work}
-\begin{frame}{STAMP: The Pipeline We Build On}
+\begin{frame}{STAMP: The Pipeline}
   \begin{columns}[T]
-    \begin{column}{0.185\textwidth}\begin{cardh}{3.0cm}\cardcol{clone}{Steel}{Augment}{15 views, averaged}\end{cardh}\end{column}
-    \begin{column}{0.014\textwidth}\vspace{13mm}\centering{\color{Steel}$\to$}\end{column}
-    \begin{column}{0.185\textwidth}\begin{cardh}{3.0cm}\cardcol{check-double}{Steel}{Consistency}{drop disagreeing samples}\end{cardh}\end{column}
-    \begin{column}{0.014\textwidth}\vspace{13mm}\centering{\color{Steel}$\to$}\end{column}
-    \begin{column}{0.185\textwidth}\begin{cardh}{3.0cm}\cardcol{filter}{Orange}{Entropy Gate}{$H(x)<m=\alpha\log C$}\end{cardh}\end{column}
-    \begin{column}{0.014\textwidth}\vspace{13mm}\centering{\color{Steel}$\to$}\end{column}
-    \begin{column}{0.185\textwidth}\begin{cardh}{3.0cm}\cardcol{database}{Steel}{Balanced Memory}{capacity 64, class-balanced}\end{cardh}\end{column}
-    \begin{column}{0.014\textwidth}\vspace{13mm}\centering{\color{Steel}$\to$}\end{column}
-    \begin{column}{0.185\textwidth}\begin{cardh}{3.0cm}\cardcol{redo}{Orange}{Weighted Replay}{confidence-weighted update}\end{cardh}\end{column}
+    \begin{column}{0.185\textwidth}\begin{cardh}{2.8cm}\cardcol{clone}{Steel}{Augment}{15 views}\end{cardh}\end{column}
+    \begin{column}{0.014\textwidth}\vspace{12mm}\centering{\color{Steel}$\to$}\end{column}
+    \begin{column}{0.185\textwidth}\begin{cardh}{2.8cm}\cardcol{check-double}{Steel}{Consistency}{filter}\end{cardh}\end{column}
+    \begin{column}{0.014\textwidth}\vspace{12mm}\centering{\color{Steel}$\to$}\end{column}
+    \begin{column}{0.185\textwidth}\begin{cardh}{2.8cm}\cardcol{filter}{Orange}{Entropy Gate}{$H(x)<m$}\end{cardh}\end{column}
+    \begin{column}{0.014\textwidth}\vspace{12mm}\centering{\color{Steel}$\to$}\end{column}
+    \begin{column}{0.185\textwidth}\begin{cardh}{2.8cm}\cardcol{database}{Steel}{Memory}{capacity 64}\end{cardh}\end{column}
+    \begin{column}{0.014\textwidth}\vspace{12mm}\centering{\color{Steel}$\to$}\end{column}
+    \begin{column}{0.185\textwidth}\begin{cardh}{2.8cm}\cardcol{redo}{Orange}{Replay}{weighted update}\end{cardh}\end{column}
   \end{columns}
+  \vspace{3mm}
   \small
-  \setlength{\abovedisplayskip}{2pt}\setlength{\belowdisplayskip}{2pt}
   \[
     \mathcal{L}_{\mathrm{STAMP}} = \frac{1}{|\mathcal{M}|}\sum_{x_i\in\mathcal{M}} \widetilde{w}_i\, H\!\left(f_\theta(x_i)\right),
     \qquad
-    \widetilde{w}_i=\frac{|\mathcal{M}|\,w_i}{\sum_j w_j},\ \ w_i = \exp[-H(f_\theta(x_i))]
+    \widetilde{w}_i=\frac{|\mathcal{M}|\,w_i}{\sum_j w_j}
   \]
-  \footnotesize
-  $\Rightarrow$ Only normalization parameters are updated, via the SAM-style two-step update. \textbf{The catch:} entropy $H(x)$ decides \emph{both} admission \emph{and} the loss --- coupling detection to a classifier whose confidence keeps changing.
-\end{frame}
-
-% =========================================================
-\begin{frame}{Problem Formulation \& Experimental Principle}
-  Let $f_\theta$ be a source-trained classifier with logits $\mathbf{z}(x) = f_\theta(x)$. The test stream mixes:
-  \begin{itemize}
-    \setlength\itemsep{1.5mm}
-    \item corrupted \textbf{in-distribution (ID)} samples --- must still be classified correctly
-    \item \textbf{out-of-distribution (OOD)} samples --- scored as outliers, never used as adaptation targets
-  \end{itemize}
   \vspace{2mm}
-  No test label is ever used for adaptation or threshold fitting --- only for evaluation.
-  \vspace{5mm}
-  \begin{cardh}{2.6cm}
-    \centering\sffamily\color{Navy}
-    \textbf{Guiding principle:} change only the outlier score, hold the rest of STAMP fixed. \\
-    \footnotesize\color{SubGray} Any performance change is then attributable to the score alone.
-  \end{cardh}
+  \begin{itemize}
+    \setlength\itemsep{1.5mm}\footnotesize
+    \item Updates only normalization parameters
+    \item \textbf{The catch:} entropy decides admission \emph{and} the loss
+  \end{itemize}
 \end{frame}
 
 % =========================================================
-\begin{frame}{Evaluation Protocol}
+\begin{frame}{Setup}
   \begin{columns}[T]
     \begin{column}{0.5\textwidth}
       \begin{itemize}
         \setlength\itemsep{3mm}
-        \item \textbf{\color{Navy}Datasets:} CIFAR-10-C, CIFAR-100-C --- severity 5, 15 corruptions
-        \item \textbf{\color{Navy}OOD mixture:} 10{,}000 ID + 2{,}500 noise outliers per corruption (80:20)
-        \item \textbf{\color{Navy}Backbone:} ResNet-18, batch 64, reset every corruption domain
+        \item \textbf{\color{Navy}ID samples:} classify correctly
+        \item \textbf{\color{Navy}OOD samples:} reject, never adapt on them
+        \item No test labels used, ever
+        \item CIFAR-10-C / 100-C, severity 5, 15 corruptions
+        \item ResNet-18, batch 64
       \end{itemize}
     \end{column}
-    \begin{column}{0.5\textwidth}
-      \begin{itemize}
-        \setlength\itemsep{3mm}
-        \item \textbf{\color{Navy}Baselines:} source model, \texttt{norm\_test}, modified STAMP
-        \item \textbf{\color{Navy}Metrics:} Accuracy (ID), AUC (ID vs.\ OOD), and the joint
-      \end{itemize}
+    \begin{column}{0.44\textwidth}
+      \textbf{\color{Navy}Metrics:} Accuracy, AUC, and
       \[
         H\text{-score} = \frac{2\,\mathrm{Acc}\cdot\mathrm{AUC}}{\mathrm{Acc}+\mathrm{AUC}}
       \]
+      \vspace{2mm}
+      \begin{cardh}{1.8cm}
+        \centering\sffamily\color{Navy}\small
+        Change only the score. Hold the rest of STAMP fixed.
+      \end{cardh}
     \end{column}
   \end{columns}
 \end{frame}
 
 % =========================================================
-\begin{frame}{Roadmap: Four Falsifiable Interventions}
+\begin{frame}{Roadmap}
   \begin{columns}[T]
-    \begin{column}{0.24\textwidth}\begin{cardh}{3.0cm}\centering\iconcircle{crosshairs}{Steel}\\[1mm]{\rmfamily\bfseries\color{Navy}R1}\\{\footnotesize KNN feature distance}\\[1mm]{\scriptsize\color{Steel}\bfseries done}\end{cardh}\end{column}
-    \begin{column}{0.24\textwidth}\begin{cardh}{3.0cm}\centering\iconcircle{bolt}{Orange}\\[1mm]{\rmfamily\bfseries\color{Navy}R2}\\{\footnotesize Logit energy score}\\[1mm]{\scriptsize\color{Steel}\bfseries done}\end{cardh}\end{column}
-    \begin{column}{0.24\textwidth}\begin{cardh}{3.0cm}\centering\iconcircle{sliders-h}{Steel}\\[1mm]{\rmfamily\bfseries\color{Navy}R3}\\{\footnotesize Adaptive conformal threshold}\\[1mm]{\scriptsize\color{Steel}\bfseries done}\end{cardh}\end{column}
-    \begin{column}{0.24\textwidth}\begin{cardh}{3.0cm}\centering\iconcircle{bug}{Orange}\\[1mm]{\rmfamily\bfseries\color{Navy}R4}\\{\footnotesize Replay-loss scaling fix}\\[1mm]{\scriptsize\color{Steel}\bfseries done}\end{cardh}\end{column}
+    \begin{column}{0.24\textwidth}\begin{cardh}{2.6cm}\centering\iconcircle{crosshairs}{Steel}\\[1mm]{\rmfamily\bfseries\color{Navy}R1}\\{\footnotesize KNN distance}\end{cardh}\end{column}
+    \begin{column}{0.24\textwidth}\begin{cardh}{2.6cm}\centering\iconcircle{bolt}{Orange}\\[1mm]{\rmfamily\bfseries\color{Navy}R2}\\{\footnotesize Energy score}\end{cardh}\end{column}
+    \begin{column}{0.24\textwidth}\begin{cardh}{2.6cm}\centering\iconcircle{sliders-h}{Steel}\\[1mm]{\rmfamily\bfseries\color{Navy}R3}\\{\footnotesize Adaptive threshold}\end{cardh}\end{column}
+    \begin{column}{0.24\textwidth}\begin{cardh}{2.6cm}\centering\iconcircle{bug}{Orange}\\[1mm]{\rmfamily\bfseries\color{Navy}R4}\\{\footnotesize Loss fix}\end{cardh}\end{column}
   \end{columns}
-  \vspace{5mm}
+  \vspace{6mm}
   \begin{itemize}
-    \setlength\itemsep{2.5mm}
-    \item R1--R2 replace \textbf{\emph{what}} scores a sample; R3 replaces \textbf{\emph{how}} it becomes a decision
-    \item R4 is not a new score --- it's a correctness fix to STAMP's own replay loss
-    \item Every round keeps the consistency filter, memory, and replay objective fixed
+    \setlength\itemsep{3mm}
+    \item R1, R2: change \textbf{what} scores a sample
+    \item R3: change \textbf{how} the score becomes a decision
+    \item R4: fixes a bug in the replay loss
   \end{itemize}
 \end{frame}
 
 % =========================================================
-\begin{frame}{Round 1 --- KNN Feature-Distance Score}
-  \textbf{\color{Navy}Hypothesis:} feature geometry catches outliers an entropy threshold misses, decoupled from the classifier's own confidence.
-  \vspace{3mm}
+\begin{frame}{Round 1: KNN Feature Distance}
   \[
     s_{\mathrm{KNN}}(x) = 1 - \frac{1}{k}\sum_{j\in\mathcal{N}_k(x)} \hat{\mathbf{h}}(x)^{\top}\hat{\mathbf{r}}_j
   \]
   \begin{itemize}
     \setlength\itemsep{2.5mm}
-    \item $\hat{\mathbf{h}}(x)$: normalized penultimate feature; $\mathcal{R}$: bank of clean source features
-    \item Up to 2{,}000 references, $k{=}10$; replaces entropy for \emph{both} admission and AUC
-    \item Consistency gate, memory, and replay update stay unchanged
+    \item Distance to a bank of clean source features
+    \item $k{=}10$, up to 2{,}000 references
   \end{itemize}
-  \vspace{4mm}
-  \begin{cardh}{1.8cm}\small\color{Navy}
-    Expected: independence from softmax confidence $\Rightarrow$ better AUC. \textbf{Not what we observed.}
-  \end{cardh}
-\end{frame}
-
-% =========================================================
-\begin{frame}{Round 1 --- Results \& Diagnosis}
-  \small
-  \begin{columns}[T]
-    \begin{column}{0.48\textwidth}
-    \begin{table}
-    \centering
-    \renewcommand{\arraystretch}{1.15}
-    \begin{tabular}{lrrr}
-      \toprule
-      \textbf{CIFAR-10-C} & Acc.\ & AUC & H \\
-      \midrule
-      Source & 57.34 & 70.39 & 62.32 \\
-      Norm-test & 72.95 & 68.51 & \textbf{70.58} \\
-      KNN--STAMP & \textbf{78.64} & 59.10 & 63.61 \\
-      \bottomrule
-    \end{tabular}
-    \end{table}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-    \begin{table}
-    \centering
-    \renewcommand{\arraystretch}{1.15}
-    \begin{tabular}{lrrr}
-      \toprule
-      \textbf{CIFAR-100-C} & Acc.\ & AUC & H \\
-      \midrule
-      Source & 35.83 & 43.13 & 38.01 \\
-      Norm-test & \textbf{45.90} & \textbf{80.91} & \textbf{58.49} \\
-      KNN--STAMP & 45.73 & 69.93 & 54.15 \\
-      \bottomrule
-    \end{tabular}
-    \end{table}
-    \end{column}
-  \end{columns}
+  \vspace{5mm}
+  \sectiontag{Result}
   \vspace{2mm}
   \begin{itemize}
-    \setlength\itemsep{3mm}
-    \item KNN--STAMP \textbf{wins accuracy} (+21.3 pts over source) but \textbf{loses AUC} ($-$9.4 vs.\ norm-test on C10, $-$11.0 on C100)
-    \item \textbf{\color{Navy}Working explanation:} corruption shifts the clean reference bank away from ID features too --- distance rejects \emph{useful} samples, not just outliers
+    \setlength\itemsep{2mm}
+    \item Accuracy up: \textbf{\color{Steel}+21.3 pts}
+    \item AUC down: \textbf{\color{Orange}$-$9.4 / $-$11.0 pts}
+    \item Cause: corruption moves the reference bank away from clean ID features
   \end{itemize}
 \end{frame}
 
 % =========================================================
-\begin{frame}{Round 2 --- Energy Score with Online Calibration}
-  \textbf{\color{Navy}Hypothesis:} drop the fixed reference bank; score directly from logits.
-  \vspace{1mm}
+\begin{frame}{Round 2: Logit Energy Score}
   \[
-    E_T(x) = -T\log\sum_{c=1}^{C}\exp(z_c(x)/T), \qquad T{=}1
+    E_T(x) = -T\log\sum_{c=1}^{C}\exp(z_c(x)/T)
   \]
   \begin{itemize}
     \setlength\itemsep{2.5mm}
-    \item Uses logits STAMP already computes --- \textbf{no extra forward pass, no reference bank}
-    \item Threshold = \textbf{80th percentile} of the latest 1{,}000 scores (matches 80:20 mixture, label-free)
-    \item First 256 samples fall back to entropy margin (warm-up); cutoff resets each domain
+    \item No reference bank, no extra forward pass
+    \item Threshold: 80th percentile of the last 1{,}000 scores
   \end{itemize}
-  \vspace{1mm}
-  \[
-    E_T(x) < \operatorname{Quantile}_{0.80}(\mathcal{B}_t)
-  \]
-\end{frame}
-
-% =========================================================
-\begin{frame}{Round 2 --- Results \& Diagnosis}
-  \small
-  \begin{columns}[T]
-    \begin{column}{0.48\textwidth}
-    \begin{table}
-    \centering
-    \renewcommand{\arraystretch}{1.15}
-    \begin{tabular}{lrrr}
-      \toprule
-      \textbf{CIFAR-10-C} & Acc.\ & AUC & H \\
-      \midrule
-      Norm-test & 72.95 & 68.51 & \textbf{70.58} \\
-      KNN--STAMP & 78.64 & 59.10 & 63.61 \\
-      Energy--STAMP & \textbf{78.99} & 54.33 & 63.80 \\
-      \bottomrule
-    \end{tabular}
-    \end{table}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-    \begin{table}
-    \centering
-    \renewcommand{\arraystretch}{1.15}
-    \begin{tabular}{lrrr}
-      \toprule
-      \textbf{CIFAR-100-C} & Acc.\ & AUC & H \\
-      \midrule
-      Norm-test & 45.90 & 80.91 & 58.49 \\
-      KNN--STAMP & 45.73 & 69.93 & 54.15 \\
-      Energy--STAMP & \textbf{57.14} & \textbf{95.12} & \textbf{71.33} \\
-      \bottomrule
-    \end{tabular}
-    \end{table}
-    \end{column}
-  \end{columns}
+  \vspace{5mm}
+  \sectiontag{Result}
   \vspace{2mm}
   \begin{itemize}
-    \setlength\itemsep{3mm}
-    \item \textbf{CIFAR-100-C:} strongest result yet --- +17.2 H-score over KNN, +12.8 over norm-test
-    \item \textbf{CIFAR-10-C:} AUC \emph{drops} to 54.33 --- energy alone is \textbf{not} dataset-independent
+    \setlength\itemsep{2mm}
+    \item CIFAR-100-C: strongest result yet (\textbf{\color{Steel}71.33 H})
+    \item CIFAR-10-C: AUC drops to \textbf{\color{Orange}54.33}
+    \item Not dataset-independent
   \end{itemize}
 \end{frame}
 
 % =========================================================
-\begin{frame}{Round 3 --- Adaptive Conformal Thresholding}
-  Rounds 1--2 change the \emph{score}; Round 3 asks: does \textbf{online threshold calibration} close the gap, independent of score choice?
-  \vspace{3mm}
+\begin{frame}{Round 3: Adaptive Threshold}
   \[
     \alpha_{t+1} = \operatorname{clip}_{[0,1]}\big(\alpha_t + \gamma(\rho - r_t)\big)
   \]
   \begin{itemize}
     \setlength\itemsep{2.5mm}
-    \item $\rho = 0.20$: target rejection rate; $r_t$: observed rate in the current batch
-    \item Cutoff read at quantile $1-\alpha_t$ of the rolling buffer --- rises/falls automatically
+    \item Target rejection rate $\rho = 0.20$
+    \item Cutoff adjusts automatically from the rolling score buffer
   \end{itemize}
+  \vspace{5mm}
+  \sectiontag{Result}
   \vspace{2mm}
-  \begin{cardh}{1.7cm}
-    \centering\small\textbf{\color{Navy}Energy--STAMP + ACI}\\
-    {\footnotesize Holds the energy score fixed and tests whether adaptive calibration improves admission.}
-  \end{cardh}
-  \vspace{3mm}
-  \vspace{2mm}
-  \centerline{\footnotesize\itshape\color{SubGray}Energy+ACI closely matches, but does not improve on, the fixed-percentile energy baseline.}
+  \begin{itemize}
+    \item Matches, but does not improve, the fixed-threshold energy score
+  \end{itemize}
 \end{frame}
 
 % =========================================================
-\begin{frame}{Round 4 --- The Bug: Replay-Loss Scaling}
-  Not a new score --- an \textbf{implementation fix} in STAMP's own replay loss.
-  \vspace{2mm}
-
+\begin{frame}{Round 4: The Bug}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
-      \begin{cardh}{3.0cm}
-      \centering{\sffamily\bfseries\color{Orange}\faIcon{bug}\ \ Before (bug)}\\[2mm]
+      \begin{cardh}{2.3cm}
+      \centering{\sffamily\bfseries\color{Orange}\faIcon{bug}\ \ Before}\\[2mm]
       \[
         \mathcal{L}_{\mathrm{old}} = \frac{64}{N}\,\mathcal{L}
       \]
-      {\footnotesize\color{SubGray} Normalized for capacity 64, then averaged over the \emph{actual} size $N$}
       \end{cardh}
     \end{column}
     \begin{column}{0.48\textwidth}
-      \begin{cardh}{3.0cm}
-      \centering{\sffamily\bfseries\color{Steel}\faIcon{check-circle}\ \ After (fixed)}\\[2mm]
+      \begin{cardh}{2.3cm}
+      \centering{\sffamily\bfseries\color{Steel}\faIcon{check-circle}\ \ After}\\[2mm]
       \[
-        \widetilde{w}_i = \frac{N w_i}{\sum_j w_j}, \quad \mathcal{L} = \frac{1}{N}\sum_i \widetilde{w}_i H_i
+        \mathcal{L} = \frac{1}{N}\sum_i \widetilde{w}_i H_i
       \]
-      {\footnotesize\color{SubGray} Coefficients always sum to $N$ --- a proper weighted average}
       \end{cardh}
     \end{column}
   \end{columns}
-  \vspace{1.5mm}
-  \footnotesize
-  \begin{itemize}
-    \setlength\itemsep{0.6mm}
-    \item Memory resets every corruption domain and starts \textbf{partially filled} ($N<64$) $\Rightarrow$ gradients inflated up to $\mathbf{64\times}$ right after every reset
-    \item Full-memory case ($N{=}64$) is unchanged --- only warm-up is rescaled. We name this fix \textbf{STAMP+BSN}.
-  \end{itemize}
-\end{frame}
-
-% =========================================================
-\begin{frame}{Round 4 --- Results: Best Scores}
-  \small
-  \begin{columns}[T]
-    \begin{column}{0.48\textwidth}
-    \begin{table}
-    \centering
-    \renewcommand{\arraystretch}{1.15}
-    \begin{tabular}{lrrr}
-      \toprule
-      \textbf{CIFAR-10-C} & Acc.\ & AUC & H \\
-      \midrule
-      Norm-test & 72.95 & 68.51 & 70.58 \\
-      Energy--STAMP & 78.99 & 54.33 & 63.80 \\
-      \textbf{STAMP+BSN} & \textbf{78.95} & \textbf{83.96} & \textbf{81.19} \\
-      \bottomrule
-    \end{tabular}
-    \end{table}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-    \begin{table}
-    \centering
-    \renewcommand{\arraystretch}{1.15}
-    \begin{tabular}{lrrr}
-      \toprule
-      \textbf{CIFAR-100-C} & Acc.\ & AUC & H \\
-      \midrule
-      Norm-test & 45.90 & 80.91 & 58.49 \\
-      Energy--STAMP & 57.14 & 95.12 & 71.33 \\
-      \textbf{STAMP+BSN} & \textbf{58.02} & \textbf{98.29} & \textbf{72.89} \\
-      \bottomrule
-    \end{tabular}
-    \end{table}
-    \end{column}
-  \end{columns}
-  \vspace{3mm}
+  \vspace{5mm}
   \begin{itemize}
     \setlength\itemsep{2.5mm}
-    \item CIFAR-10-C AUC jumps \textbf{54.33 $\to$ 83.96} (+29.6 pts) with accuracy preserved --- unstable warm-up gradients were destabilizing the model
-    \item \textbf{Correct replay-loss scaling matters as much as the choice of outlier score}
+    \item Memory starts partially filled ($N{<}64$)
+    \item Gradients were inflated up to \textbf{64$\times$}
+    \item Fixed variant: \textbf{STAMP+BSN}
+  \end{itemize}
+  \vspace{3mm}
+  \sectiontag{Result}
+  \vspace{2mm}
+  \begin{itemize}
+    \item Best on both benchmarks: \textbf{\color{Steel}81.19 H} (C10), \textbf{\color{Steel}72.89 H} (C100)
   \end{itemize}
 \end{frame}
 
 % =========================================================
-\begin{frame}{Full Results: All Rounds, Both Benchmarks}
-  \tiny
+\begin{frame}{Full Results}
+  \small
   \begin{table}
     \centering
     \renewcommand{\arraystretch}{1.25}
     \begin{tabular}{llrrr}
       \toprule
-      \textbf{Dataset} & \textbf{Method} & \textbf{Acc.} & \textbf{AUC} & \textbf{H-score} \\
+      \textbf{Dataset} & \textbf{Method} & \textbf{Acc.} & \textbf{AUC} & \textbf{H} \\
       \midrule
-      \multirow{6}{*}{CIFAR-10-C + Noise}
+      \multirow{6}{*}{CIFAR-10-C}
         & Source            & 57.34 & 70.39 & 62.32 \\
         & Norm-test         & 72.95 & 68.51 & 70.58 \\
-        & KNN--STAMP (R1)   & 78.64 & 59.10 & 63.61 \\
-        & Energy--STAMP (R2)& \textbf{78.99} & 54.33 & 63.80 \\
+        & KNN (R1)          & 78.64 & 59.10 & 63.61 \\
+        & Energy (R2)       & \textbf{78.99} & 54.33 & 63.80 \\
         & Energy+ACI (R3)   & 78.98 & 54.08 & 63.58 \\
         & \textbf{STAMP+BSN (R4)} & 78.95 & \textbf{83.96} & \textbf{81.19} \\
       \midrule
-      \multirow{6}{*}{CIFAR-100-C + Noise}
+      \multirow{6}{*}{CIFAR-100-C}
         & Source            & 35.83 & 43.13 & 38.01 \\
         & Norm-test         & 45.90 & 80.91 & 58.49 \\
-        & KNN--STAMP (R1)   & 45.73 & 69.93 & 54.15 \\
-        & Energy--STAMP (R2)& 57.14 & 95.12 & 71.33 \\
+        & KNN (R1)          & 45.73 & 69.93 & 54.15 \\
+        & Energy (R2)       & 57.14 & 95.12 & 71.33 \\
         & Energy+ACI (R3)   & 57.04 & 95.08 & 71.24 \\
         & \textbf{STAMP+BSN (R4)} & \textbf{58.02} & \textbf{98.29} & \textbf{72.89} \\
       \bottomrule
     \end{tabular}
   \end{table}
-  \vspace{2mm}
-  \centerline{\footnotesize\color{SubGray} 15 severity-5 corruptions, mean across streams. \textbf{Bold} = best value per dataset.}
 \end{frame}
 
 % =========================================================
 \begin{frame}{Key Takeaways}
   \begin{itemize}
-    \setlength\itemsep{5mm}
-    \item[\iconcircle{crosshairs}{Steel}] \textbf{\color{Navy}KNN distance} improves accuracy but \textbf{worsens} detection --- the clean reference bank is the wrong anchor once ID features drift.
-    \item[\iconcircle{bolt}{Orange}] \textbf{\color{Navy}Energy scoring} excels on CIFAR-100-C (71.33 H) but is \textbf{dataset-dependent} --- weak on CIFAR-10-C.
-    \item[\iconcircle{bug}{Orange}] \textbf{\color{Navy}The replay-loss fix (R4)} gives the \textbf{best results on both benchmarks} --- a bug fix beat every scoring idea.
-    \item[\iconcircle{sliders-h}{Steel}] \textbf{Adaptive calibration (R3)} closely matches the fixed-percentile energy baseline but does not improve it.
+    \setlength\itemsep{5.5mm}
+    \item[\iconcircle{crosshairs}{Steel}] \textbf{\color{Navy}KNN:} better accuracy, worse detection
+    \item[\iconcircle{bolt}{Orange}] \textbf{\color{Navy}Energy:} strong on CIFAR-100-C, dataset-dependent
+    \item[\iconcircle{bug}{Orange}] \textbf{\color{Navy}Loss fix:} best on both benchmarks
+    \item[\iconcircle{sliders-h}{Steel}] \textbf{\color{Navy}Calibration:} no improvement over a fixed threshold
   \end{itemize}
 \end{frame}
 
 % =========================================================
 \begin{frame}{Conclusion}
-  We asked whether STAMP's entropy-based detector --- which doubles as its adaptation objective --- can be replaced by an OOD-detection signal, holding the rest of STAMP fixed.
-  \vspace{3mm}
   \begin{itemize}
-    \setlength\itemsep{3.5mm}
-    \item Neither KNN distance nor energy scoring alone gives a \textbf{dataset-independent} gain in the joint trade-off
-    \item The biggest, most consistent gain came from a \textbf{correctness fix} (STAMP+BSN) --- 81.19 H on CIFAR-10-C, 72.89 on CIFAR-100-C, best on both
-    \item ACI threshold calibration does not improve the fixed-percentile energy baseline on either benchmark
+    \setlength\itemsep{4.5mm}
+    \item No single score is dataset-independent
+    \item The biggest gain came from a \textbf{correctness fix}, not a new score
+    \item STAMP+BSN: best H-score on both benchmarks
   \end{itemize}
 \end{frame}
 
@@ -554,14 +300,14 @@
   \vspace{3mm}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
-      \begin{cardh}{2.5cm}\footnotesize\cardrow{sliders-h}{Steel}{Multi-Seed Evaluation}{Report uncertainty across random seeds.}\end{cardh}
+      \begin{cardh}{2.3cm}\footnotesize\cardrow{sliders-h}{Steel}{Multi-Seed Evaluation}{Uncertainty across random seeds}\end{cardh}
       \vspace{2mm}
-      \begin{cardh}{2.5cm}\footnotesize\cardrow{search}{Steel}{Per-Corruption Diagnostics}{ID-rejection / OOD-admission rates per corruption type.}\end{cardh}
+      \begin{cardh}{2.3cm}\footnotesize\cardrow{search}{Steel}{Per-Corruption Diagnostics}{ID/OOD rates per corruption}\end{cardh}
     \end{column}
     \begin{column}{0.48\textwidth}
-      \begin{cardh}{2.5cm}\footnotesize\cardrow{layer-group}{Orange}{Combine Best of Each Round}{Energy score + BSN fix + ACI calibration together.}\end{cardh}
+      \begin{cardh}{2.3cm}\footnotesize\cardrow{layer-group}{Orange}{Combine Best of Each Round}{Energy + BSN + ACI together}\end{cardh}
       \vspace{2mm}
-      \begin{cardh}{2.5cm}\footnotesize\cardrow{chart-line}{Orange}{Warm-Up Ablation}{Log memory occupancy and loss to confirm \emph{why} STAMP+BSN stabilizes CIFAR-10-C.}\end{cardh}
+      \begin{cardh}{2.3cm}\footnotesize\cardrow{chart-line}{Orange}{Warm-Up Ablation}{Confirm why STAMP+BSN stabilizes C10-C}\end{cardh}
     \end{column}
   \end{columns}
 \end{frame}
@@ -574,22 +320,22 @@
       \sectiontag{This work builds on}\\[1mm]
       \begin{itemize}
         \setlength\itemsep{1.6mm}
-        \item Yu, Sheng, He, Liang. \textit{STAMP: Outlier-Aware TTA with Stable Memory Replay.} ECCV 2024.
+        \item Yu, Sheng, He, Liang. \textit{STAMP.} ECCV 2024.
         \item Liu, Wang, Owens, Li. \textit{Energy-Based OOD Detection.} NeurIPS 2020.
-        \item Sun, Ming, Zhu, Li. \textit{OOD Detection with Deep Nearest Neighbors.} ICML 2022.
-        \item Gibbs, Cand\`es. \textit{Adaptive Conformal Inference Under Distribution Shift.} NeurIPS 2021.
-        \item Hendrycks, Dietterich. \textit{Benchmarking NN Robustness to Common Corruptions.} ICLR 2019.
+        \item Sun, Ming, Zhu, Li. \textit{Deep Nearest Neighbors.} ICML 2022.
+        \item Gibbs, Cand\`es. \textit{Adaptive Conformal Inference.} NeurIPS 2021.
+        \item Hendrycks, Dietterich. \textit{Common Corruptions.} ICLR 2019.
       \end{itemize}
     \end{column}
     \begin{column}{0.5\textwidth}
-      \sectiontag{Foundational TTA methods}\\[1mm]
+      \sectiontag{Foundational TTA}\\[1mm]
       \begin{itemize}
         \setlength\itemsep{1.6mm}
-        \item Wang et al. \textit{Tent: Fully TTA by Entropy Minimization.} ICLR 2021.
-        \item Niu et al. \textit{Efficient TTA without Forgetting.} ICML 2022. (EATA)
-        \item Niu et al. \textit{Towards Stable TTA in Dynamic Wild World.} ICLR 2023. (SAR)
-        \item Bendale, Boult. \textit{Towards Open Set Deep Networks.} CVPR 2016. (OpenMax)
-        \item Sensoy, Kaplan, Kandemir. \textit{Evidential Deep Learning for Uncertainty.} NeurIPS 2018.
+        \item Wang et al. \textit{Tent.} ICLR 2021.
+        \item Niu et al. \textit{EATA.} ICML 2022.
+        \item Niu et al. \textit{SAR.} ICLR 2023.
+        \item Bendale, Boult. \textit{OpenMax.} CVPR 2016.
+        \item Sensoy, Kaplan, Kandemir. \textit{Evidential Deep Learning.} NeurIPS 2018.
       \end{itemize}
     \end{column}
   \end{columns}
