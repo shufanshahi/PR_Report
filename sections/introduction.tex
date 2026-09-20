@@ -56,12 +56,15 @@ the remaining CIFAR-10-C failure mode.
 The contrasting energy results also expose a limitation shared by the first two
 rounds: both ultimately convert a score into a hard admission decision using a
 threshold. Replacing the score does not by itself guarantee that this cutoff
-remains calibrated as the stream changes. Our third, ongoing intervention
-therefore imports adaptive conformal inference (ACI) from distribution-free
+remains calibrated as the stream changes. Our third intervention therefore
+imports adaptive conformal inference (ACI) from distribution-free
 statistics~\cite{gibbs2021aci}. ACI adjusts the score quantile online to target
-the desired rejection rate. We run it with the original entropy score to isolate
-threshold calibration, and with energy to test the combined intervention. The
-results are intentionally left pending.
+the desired rejection rate. Energy--STAMP+ACI obtains 63.58 H-score on
+CIFAR-10-C and 71.24 on CIFAR-100-C, compared with 63.80 and 71.33 for the
+rolling-percentile energy baseline. Thus, this reported ACI configuration does
+not improve aggregate performance in the present streams. The entropy+ACI
+comparator remains pending, so this result isolates neither score choice nor
+thresholding completely.
 
 Finally, we found a separate implementation-level issue in the replay loss.
 STAMP uses confidence-weighted entropy over a memory of capacity 64, but the
@@ -85,8 +88,9 @@ The contributions of this work are:
     \item an energy-based follow-up with online thresholding that substantially
     improves the joint metric on CIFAR-100-C, while revealing a remaining
     dataset-dependent detection failure on CIFAR-10-C; and
-    \item an ongoing ACI threshold-calibration study that distinguishes the
-    effect of adaptive thresholding from the choice of entropy or energy score;
+    \item an ACI threshold-calibration result showing that adaptive energy
+    thresholding does not improve on the rolling-percentile energy baseline in
+    the evaluated streams, while retaining entropy+ACI as a pending comparator;
     and
     \item a batch-size-invariant replay-loss correction that removes a $64/N$
     warm-up scaling error and produces the best completed joint results.
@@ -94,5 +98,6 @@ The contributions of this work are:
 
 The remainder of the paper is organized as follows. Section~II reviews TTA,
 STAMP, OOD scores, and conformal calibration. Section~III describes the four
-interventions and evaluation protocol. Section~IV reports the completed results
-and reserves the ACI comparison. Section~V concludes the paper.
+interventions and evaluation protocol. Section~IV reports the completed results,
+including energy+ACI, and identifies the remaining entropy+ACI comparison as
+pending. Section~V concludes the paper.
